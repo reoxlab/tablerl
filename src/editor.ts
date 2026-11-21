@@ -101,7 +101,14 @@ export class GridEditor {
 
   /** Sustituye la tabla entera (p. ej. tras importar un XLSX). */
   setTable(table: TableModel): void {
-    this.table = table
+    // Se copia EN EL MISMO objeto (no se reemplaza la referencia): main.ts
+    // guarda la misma referencia y genera el código a partir de ella. Si
+    // se reemplazara, importar una tabla dejaría el panel de código con
+    // la tabla vieja.
+    this.table.rows = table.rows
+    this.table.cols = table.cols
+    this.table.cells = table.cells
+    this.table.colWidths = table.colWidths
     this.sel = { row: 0, col: 0 }
     this.anchor = { row: 0, col: 0 }
     this.render()

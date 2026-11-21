@@ -28,6 +28,13 @@ import { toTypst } from './exporters/typst'
 import { importXlsx } from './importers/xlsx'
 import { parseLatex } from './importers/latex'
 import { openInOverleaf } from './overleaf'
+import {
+  autosave,
+  deleteRecent,
+  loadAutosave,
+  loadRecents,
+  saveRecent,
+} from './recents'
 
 type Format = 'latex' | 'booktabs' | 'markdown' | 'typst'
 
@@ -92,6 +99,17 @@ app.innerHTML = `
           <button class="tx-btn tx-btn--primary" id="btn-import-latex-go" type="button">Importar</button>
           <span class="tx-size" id="import-latex-msg"></span>
         </div>
+      </details>
+      <details class="tx-recents" id="recents-panel">
+        <summary>Tablas recientes</summary>
+        <p class="tx-hint">Se guardan en tu navegador, sin servidor. La tabla actual
+        se guarda sola al editarla.</p>
+        <div class="tx-actions">
+          <button class="tx-btn" id="btn-save-recent" type="button">Guardar copia</button>
+          <button class="tx-btn" id="btn-restore-autosave" type="button" hidden>Restaurar última sesión</button>
+          <span class="tx-size" id="recents-msg"></span>
+        </div>
+        <ul class="tx-recents-list" id="recents-list"></ul>
       </details>
       <p class="tx-hint">Haz clic en una celda y escribe. <kbd>Tab</kbd> pasa a la siguiente,
       <kbd>Enter</kbd> baja una fila y las flechas se mueven entre celdas.
@@ -204,11 +222,15 @@ function updateLatexOptionsEnabled(): void {
 }
 
 const editor = new GridEditor(gridHost, table, {
-  onTextChange: updateCode,
+  onTextChange: () => {
+    updateCode()
+    scheduleAutosave()
+  },
   onStructureChange: () => {
     updateCode()
     updateSize()
     updateFormatButtons()
+    scheduleAutosave()
   },
   onSelectionChange: updateFormatButtons,
 })
@@ -412,6 +434,110 @@ document
         err instanceof Error ? err.message : 'No se pudo importar el código.'
     }
   })
+
+// -- tablas recientes y autoguardado (v0.3) -----------------------------------
+
+let autosaveTimer: number | undefined
+function scheduleAutosave(): void {
+  window.clearTimeout(autosaveTimer)
+  autosaveTimer = window.setTimeout(() => {
+    autosave(window.localStorage, table, captionInput.value, labelInput.value)
+  }, 1000)
+}
+
+const recentsList = document.querySelector<HTMLUListElement>('#recents-list')!
+const recentsMsg = document.querySelector<HTMLSpanElement>('#recents-msg')!
+const restoreBtn = document.querySelector<HTMLButtonElement>('#btn-restore-autosave')!
+
+function loadIntoEditor(
+  model: Parameters<typeof editor.setTable>[0],
+  caption: string,
+  label: string,
+): void {
+  editor.setTable(model)
+  captionInput.value = caption
+  labelInput.value = label
+  updateCode()
+  updateSize()
+  updateFormatButtons()
+}
+
+function renderRecents(): void {
+  recentsList.replaceChildren()
+  const entries = loadRecents(window.localStorage)
+  if (entries.length === 0) {
+    const li = document.createElement('li')
+    li.className = 'tx-recents-empty'
+    li.textContent = 'Aún no hay copias guardadas.'
+    recentsList.appendChild(li)
+    return
+  }
+  for (const entry of entries) {
+    const li = document.createElement('li')
+    li.className = 'tx-recents-item'
+    const name = document.createElement('strong')
+    name.textContent = entry.name
+    const date = document.createElement('span')
+    date.className = 'tx-recents-date'
+    date.textContent = new Date(entry.savedAt).toLocaleString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    const loadBtn = document.createElement('button')
+    loadBtn.type = 'button'
+    loadBtn.className = 'tx-btn'
+    loadBtn.textContent = 'Cargar'
+    loadBtn.addEventListener('click', () => {
+      loadIntoEditor(entry.model, entry.caption, entry.label)
+      recentsMsg.textContent = `Cargado: ${entry.name}`
+    })
+    const delBtn = document.createElement('button')
+    delBtn.type = 'button'
+    delBtn.className = 'tx-btn'
+    delBtn.textContent = '✕'
+    delBtn.title = 'Eliminar copia'
+    delBtn.addEventListener('click', () => {
+      deleteRecent(window.localStorage, entry.id)
+      renderRecents()
+    })
+    li.append(name, date, loadBtn, delBtn)
+    recentsList.appendChild(li)
+  }
+}
+
+document
+  .querySelector<HTMLButtonElement>('#btn-save-recent')!
+  .addEventListener('click', () => {
+    const entries = saveRecent(
+      window.localStorage,
+      table,
+      captionInput.value,
+      labelInput.value,
+    )
+    renderRecents()
+    recentsMsg.textContent = `Guardado: ${entries[0].name}`
+  })
+
+restoreBtn.addEventListener('click', () => {
+  const saved = loadAutosave(window.localStorage)
+  if (!saved) return
+  loadIntoEditor(saved.model, saved.caption, saved.label)
+  recentsMsg.textContent = 'Sesión anterior restaurada.'
+  restoreBtn.hidden = true
+})
+
+// Al arrancar, si hay autoguardado de una tabla con contenido, se ofrece
+// restaurarlo (no se restaura solo: sorprendería al abrir la página).
+const savedSession = loadAutosave(window.localStorage)
+if (
+  savedSession &&
+  savedSession.model.cells.some((row) => row.some((cell) => cell.text.trim() !== ''))
+) {
+  restoreBtn.hidden = false
+}
+renderRecents()
 
 for (const input of [captionInput, labelInput]) {
   input.addEventListener('input', updateCode)

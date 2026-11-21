@@ -416,6 +416,59 @@ a {
   padding: 0.5rem 0 0.25rem;
 }
 
+/* -- tablas recientes (v0.3) ------------------------------------------------- */
+
+.tx-recents {
+  margin-top: 0.75rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.tx-recents summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.tx-recents .tx-actions {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.tx-recents-list {
+  list-style: none;
+  margin: 0.5rem 0 0.25rem;
+  padding: 0;
+}
+
+.tx-recents-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--borde);
+  font-size: 0.9rem;
+}
+
+.tx-recents-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-recents-date {
+  color: var(--texto-suave);
+  font-size: 0.82rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.tx-recents-empty {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+}
+
 .tx-copied {
   font-size: 0.85rem;
   font-weight: 700;
