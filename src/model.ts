@@ -117,3 +117,88 @@ export function clearTable(table: TableModel): void {
     for (let c = 0; c < row.length; c++) row[c] = emptyCell()
   }
 }
+
+// ---------------------------------------------------------------------------
+// Formato y fusiones (v0.2). Operan sobre un rango rectangular de celdas;
+// las celdas cubiertas por una fusión se saltan (el formato vive en la
+// celda origen).
+// ---------------------------------------------------------------------------
+
+export interface Range {
+  r0: number
+  c0: number
+  r1: number
+  c1: number
+}
+
+export function normalizeRange(r0: number, c0: number, r1: number, c1: number): Range {
+  return {
+    r0: Math.min(r0, r1),
+    c0: Math.min(c0, c1),
+    r1: Math.max(r0, r1),
+    c1: Math.max(c0, c1),
+  }
+}
+
+/** Aplica negrita/cursiva/alineación a todas las celdas origen del rango. */
+export function setRangeFormat(
+  table: TableModel,
+  range: Range,
+  patch: Partial<Pick<Cell, 'bold' | 'italic' | 'align'>>,
+): void {
+  for (let r = range.r0; r <= range.r1; r++) {
+    for (let c = range.c0; c <= range.c1; c++) {
+      const cell = table.cells[r]?.[c]
+      if (!cell || cell.coveredBy) continue
+      Object.assign(cell, patch)
+    }
+  }
+}
+
+/**
+ * Fusiona el rango en una sola celda (origen: esquina superior izquierda).
+ * Devuelve false si el rango choca con una fusión existente.
+ */
+export function mergeCells(table: TableModel, range: Range): boolean {
+  const { r0, c0, r1, c1 } = range
+  if (r0 === r1 && c0 === c1) return false
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      const cell = table.cells[r]?.[c]
+      if (!cell) return false
+      if (cell.coveredBy) return false
+      if ((cell.colspan > 1 || cell.rowspan > 1) && !(r === r0 && c === c0)) {
+        return false
+      }
+    }
+  }
+  const origin = table.cells[r0][c0]
+  origin.colspan = c1 - c0 + 1
+  origin.rowspan = r1 - r0 + 1
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      if (r === r0 && c === c0) continue
+      table.cells[r][c].coveredBy = { row: r0, col: c0 }
+    }
+  }
+  return true
+}
+
+/** Deshace la fusión de la celda (o de la fusión que la cubre). */
+export function unmergeCell(table: TableModel, row: number, col: number): boolean {
+  const cell = table.cells[row]?.[col]
+  if (!cell) return false
+  const originPos = cell.coveredBy ?? { row, col }
+  const origin = table.cells[originPos.row]?.[originPos.col]
+  if (!origin || (origin.colspan === 1 && origin.rowspan === 1)) return false
+  const { colspan, rowspan } = origin
+  origin.colspan = 1
+  origin.rowspan = 1
+  for (let r = originPos.row; r < originPos.row + rowspan; r++) {
+    for (let c = originPos.col; c < originPos.col + colspan; c++) {
+      const covered = table.cells[r]?.[c]
+      if (covered) covered.coveredBy = null
+    }
+  }
+  return true
+}
