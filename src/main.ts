@@ -109,7 +109,7 @@ app.innerHTML = `
   <footer class="tx-footer">
     TableX es software libre (GPL v3): puedes usarlo, estudiarlo, modificarlo y
     compartirlo. Código en
-    <a href="https://github.com/reoxforlife/tablex">github.com/reoxforlife/tablex</a>.
+    <a href="https://github.com/reoxlab/tablex">github.com/reoxlab/tablex</a>.
     Tus datos no salen de tu navegador: la tabla se genera aquí mismo, sin servidor.
   </footer>
 `
