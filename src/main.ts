@@ -421,10 +421,19 @@ document
       longtableInput.checked = parsed.longtable
       headerInput.checked = parsed.headerRow
       updateLatexOptionsEnabled()
+      // Si la tabla trae código LaTeX (matemáticas, comandos), el escape
+      // rompería ese código al re-exportar: se apaga y se avisa.
+      const hasLatexCode = parsed.table.cells.some((row) =>
+        row.some((cell) => cell.text.includes('$') || /\\[a-zA-Z]/.test(cell.text)),
+      )
+      if (hasLatexCode) escapeInput.checked = false
       updateCode()
       updateSize()
       const notes = [
         `Importado: ${parsed.table.rows} × ${parsed.table.cols}.`,
+        ...(hasLatexCode
+          ? ['Escape desactivado: la tabla trae código LaTeX (p. ej. $...$).']
+          : []),
         ...parsed.warnings,
       ]
       latexMsg.textContent = notes.join(' ')

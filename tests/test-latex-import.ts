@@ -226,5 +226,41 @@ try {
 check('error: tabular vacío', threw)
 check('unescape: & y %', unescapeLatex('A \\& B \\% C') === 'A & B % C')
 
+// ---------------------------------------------------------------------------
+// 7. Primer uso real: tabla de hiperparámetros del VAE (Apéndice B de la
+// tesis, apeB.tex). El contenido es código LaTeX ($...$, \times), así que
+// la ida y vuelta se hace con escape desactivado.
+// ---------------------------------------------------------------------------
+const realTable = `\\begin{tabular}{|l|c|c|c|c|c|c|}
+\\hline
+Dataset & dz & Capas & lr & $\\beta$ & MSE val & MSE holdout \\\\
+\\hline
+ds19 & 16 & $1\\times128$ & $1.04\\times10^{-3}$ & $1.13\\times10^{-3}$ & $5.44\\times10^{-5}$ & $0.00970$ \\\\
+ds15 & 12 & $1\\times176$ & $1.56\\times10^{-3}$ & $1.02\\times10^{-3}$ & $6.22\\times10^{-5}$ & $0.00855$ \\\\
+ds11 & 12 & $1\\times192$ & $1.94\\times10^{-3}$ & $3.26\\times10^{-3}$ & $1.53\\times10^{-4}$ & $0.00859$ \\\\
+\\hline
+\\end{tabular}`
+const realBack = parseLatex(realTable)
+check('tesis: 4 filas × 7 columnas', realBack.table.rows === 4 && realBack.table.cols === 7)
+check(
+  'tesis: matemáticas intactas',
+  realBack.table.cells[1][2].text === '$1\\times128$' &&
+    realBack.table.cells[1][4].text === '$1.13\\times10^{-3}$',
+)
+check(
+  'tesis: ida y vuelta exacta (sin escape)',
+  toLatex(realBack.table, {
+    style: 'standard',
+    caption: '',
+    label: '',
+    centered: false,
+    headerRow: false,
+    escape: false,
+    tabularx: false,
+    longtable: false,
+  }) === realTable,
+  `\n--- re-exportado ---\n${toLatex(realBack.table, { style: 'standard', caption: '', label: '', centered: false, headerRow: false, escape: false, tabularx: false, longtable: false })}`,
+)
+
 console.log(`\n${passed} pasadas, ${failed} fallidas`)
 if (failed > 0) process.exit(1)
