@@ -57,7 +57,10 @@ export function emptyCell(): Cell {
     italic: false,
     align: 'left',
     background: null,
-    borders: { top: false, right: false, bottom: false, left: false },
+    // Por defecto la tabla lleva todos los bordes (como tablesgenerator):
+    // el estilo estándar de LaTeX dibuja \hline por eso, y quitar un borde
+    // es una decisión explícita del usuario.
+    borders: { top: true, right: true, bottom: true, left: true },
     colspan: 1,
     rowspan: 1,
     coveredBy: null,
@@ -153,6 +156,46 @@ export function setRangeFormat(
       Object.assign(cell, patch)
     }
   }
+}
+
+/** Enciende o apaga bordes por lado en las celdas origen del rango. */
+export function setRangeBorders(
+  table: TableModel,
+  range: Range,
+  patch: Partial<Cell['borders']>,
+): void {
+  for (let r = range.r0; r <= range.r1; r++) {
+    for (let c = range.c0; c <= range.c1; c++) {
+      const cell = table.cells[r]?.[c]
+      if (!cell || cell.coveredBy) continue
+      Object.assign(cell.borders, patch)
+    }
+  }
+}
+
+/** Color de fondo (hex #RRGGBB o null) para las celdas origen del rango. */
+export function setRangeBackground(
+  table: TableModel,
+  range: Range,
+  background: string | null,
+): void {
+  for (let r = range.r0; r <= range.r1; r++) {
+    for (let c = range.c0; c <= range.c1; c++) {
+      const cell = table.cells[r]?.[c]
+      if (!cell || cell.coveredBy) continue
+      cell.background = background
+    }
+  }
+}
+
+/** Ancho explícito de una columna en px (null = automático). */
+export function setColWidth(
+  table: TableModel,
+  col: number,
+  width: number | null,
+): void {
+  if (col < 0 || col >= table.cols) return
+  table.colWidths[col] = width !== null && width > 0 ? Math.round(width) : null
 }
 
 /**

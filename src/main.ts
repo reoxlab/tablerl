@@ -65,6 +65,18 @@ app.innerHTML = `
         <input type="file" id="file-xlsx" accept=".xlsx,.xls" hidden />
         <span class="tx-size" id="import-msg"></span>
       </div>
+      <div class="tx-toolbar tx-toolbar--format">
+        <button class="tx-btn" id="btn-borders-all" type="button">Todos los bordes</button>
+        <button class="tx-btn" id="btn-borders-none" type="button">Sin bordes</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-border-top" type="button" title="Borde superior">↑</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-border-bottom" type="button" title="Borde inferior">↓</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-border-left" type="button" title="Borde izquierdo">←</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-border-right" type="button" title="Borde derecho">→</button>
+        <label class="tx-color-label">Fondo <input type="color" id="opt-bg" value="#fff3d6" /></label>
+        <button class="tx-btn" id="btn-bg-clear" type="button">Quitar fondo</button>
+        <label class="tx-color-label">Ancho col. <input type="number" id="opt-colwidth" min="40" max="600" step="10" placeholder="auto" /> px</label>
+        <button class="tx-btn" id="btn-colwidth-auto" type="button">Auto</button>
+      </div>
       <div class="tx-grid-wrap"><div id="grid"></div></div>
       <p class="tx-hint">Haz clic en una celda y escribe. <kbd>Tab</kbd> pasa a la siguiente,
       <kbd>Enter</kbd> baja una fila y las flechas se mueven entre celdas.
@@ -84,6 +96,7 @@ app.innerHTML = `
         <label><input type="checkbox" id="opt-centered" checked /> Centrada</label>
         <label><input type="checkbox" id="opt-header" checked /> Primera fila: encabezado</label>
         <label><input type="checkbox" id="opt-escape" checked /> Escapar caracteres</label>
+        <label><input type="checkbox" id="opt-tabularx" /> Ajustar al ancho (tabularx)</label>
       </div>
       <pre class="tx-code"><code id="code"></code></pre>
       <div class="tx-actions">
@@ -112,6 +125,9 @@ const labelInput = document.querySelector<HTMLInputElement>('#opt-label')!
 const centeredInput = document.querySelector<HTMLInputElement>('#opt-centered')!
 const headerInput = document.querySelector<HTMLInputElement>('#opt-header')!
 const escapeInput = document.querySelector<HTMLInputElement>('#opt-escape')!
+const tabularxInput = document.querySelector<HTMLInputElement>('#opt-tabularx')!
+const bgInput = document.querySelector<HTMLInputElement>('#opt-bg')!
+const colwidthInput = document.querySelector<HTMLInputElement>('#opt-colwidth')!
 const copiedMsg = document.querySelector<HTMLSpanElement>('#copied-msg')!
 
 function latexOptions(): LatexOptions {
@@ -122,6 +138,7 @@ function latexOptions(): LatexOptions {
     centered: centeredInput.checked,
     headerRow: headerInput.checked,
     escape: escapeInput.checked,
+    tabularx: tabularxInput.checked,
   }
 }
 
@@ -154,14 +171,16 @@ function updateSize(): void {
 }
 
 function updateLatexOptionsEnabled(): void {
-  // Título y etiqueta valen en LaTeX y en Typst (figure); centrado solo en
-  // LaTeX; encabezado en LaTeX y Typst. Markdown no usa ninguna.
+  // Título y etiqueta valen en LaTeX y en Typst (figure); centrado y
+  // tabularx solo en LaTeX; encabezado en LaTeX y Typst. Markdown no usa
+  // ninguna.
   const isMarkdown = format === 'markdown'
   const isLatex = format === 'latex' || format === 'booktabs'
   captionInput.disabled = isMarkdown
   labelInput.disabled = isMarkdown
   centeredInput.disabled = !isLatex
   headerInput.disabled = isMarkdown
+  tabularxInput.disabled = !isLatex
 }
 
 const editor = new GridEditor(gridHost, table, {
@@ -191,6 +210,9 @@ function updateFormatButtons(): void {
   document
     .querySelector<HTMLButtonElement>('#btn-align-right')!
     .classList.toggle('tx-btn--active', fmt.align === 'right')
+  bgInput.value = fmt.background ?? '#fff3d6'
+  const width = editor.selectedColWidth()
+  colwidthInput.value = width === null ? '' : String(width)
 }
 
 function setFormat(next: Format): void {
@@ -328,9 +350,52 @@ fileInput.addEventListener('change', () => {
 for (const input of [captionInput, labelInput]) {
   input.addEventListener('input', updateCode)
 }
-for (const input of [centeredInput, headerInput, escapeInput]) {
+for (const input of [centeredInput, headerInput, escapeInput, tabularxInput]) {
   input.addEventListener('change', updateCode)
 }
+
+// -- bordes, fondo y anchos (v0.2 parte 2) ------------------------------------
+
+document
+  .querySelector<HTMLButtonElement>('#btn-borders-all')!
+  .addEventListener('click', () => editor.allBorders())
+document
+  .querySelector<HTMLButtonElement>('#btn-borders-none')!
+  .addEventListener('click', () => editor.noBorders())
+
+function toggleBorder(side: 'top' | 'right' | 'bottom' | 'left'): void {
+  // El botón invierte el estado de la celda activa en ese lado.
+  const cell = table.cells[editor.selection.row]?.[editor.selection.col]
+  const current = cell?.borders[side] ?? false
+  editor.applyBorders({ [side]: !current })
+}
+
+document
+  .querySelector<HTMLButtonElement>('#btn-border-top')!
+  .addEventListener('click', () => toggleBorder('top'))
+document
+  .querySelector<HTMLButtonElement>('#btn-border-bottom')!
+  .addEventListener('click', () => toggleBorder('bottom'))
+document
+  .querySelector<HTMLButtonElement>('#btn-border-left')!
+  .addEventListener('click', () => toggleBorder('left'))
+document
+  .querySelector<HTMLButtonElement>('#btn-border-right')!
+  .addEventListener('click', () => toggleBorder('right'))
+
+bgInput.addEventListener('input', () => editor.applyBackground(bgInput.value))
+document
+  .querySelector<HTMLButtonElement>('#btn-bg-clear')!
+  .addEventListener('click', () => editor.applyBackground(null))
+
+colwidthInput.addEventListener('change', () => {
+  const value = colwidthInput.value.trim()
+  const width = value === '' ? null : Number.parseInt(value, 10)
+  editor.setSelectedColWidth(Number.isFinite(width) ? width : null)
+})
+document
+  .querySelector<HTMLButtonElement>('#btn-colwidth-auto')!
+  .addEventListener('click', () => editor.setSelectedColWidth(null))
 
 function track(eventName: string): void {
   const umami = (window as unknown as { umami?: { track: (n: string, d?: Record<string, string>) => void } }).umami
