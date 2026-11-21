@@ -1,0 +1,15 @@
+services:
+  tablex:
+    build: .
+    container_name: tablex
+    restart: unless-stopped
+    # Servir por HTTP directo en el host (para pruebas locales):
+    ports:
+      - "8080:80"
+    # Cuando se decida la URL pública, quitar ports: y activar estas
+    # etiquetas de Traefik (revisar el nombre de la red según /srv/traefik):
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.tablex.rule=Host(`tablex.reoxlab.com`)"
+    #   - "traefik.http.routers.tablex.entrypoints=websecure"
+    #   - "traefik.http.routers.tablex.tls.certresolver=cloudflare"
