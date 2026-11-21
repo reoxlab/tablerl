@@ -26,6 +26,7 @@ import { toLatex, type LatexOptions } from './exporters/latex'
 import { toMarkdown } from './exporters/markdown'
 import { toTypst } from './exporters/typst'
 import { importXlsx } from './importers/xlsx'
+import { parseLatex } from './importers/latex'
 
 type Format = 'latex' | 'booktabs' | 'markdown' | 'typst'
 
@@ -63,6 +64,7 @@ app.innerHTML = `
         <button class="tx-btn" id="btn-unmerge" type="button">Separar</button>
         <button class="tx-btn" id="btn-import-xlsx" type="button">Importar XLSX</button>
         <input type="file" id="file-xlsx" accept=".xlsx,.xls" hidden />
+        <button class="tx-btn" id="btn-import-latex" type="button">Importar LaTeX</button>
         <span class="tx-size" id="import-msg"></span>
       </div>
       <div class="tx-toolbar tx-toolbar--format">
@@ -78,6 +80,18 @@ app.innerHTML = `
         <button class="tx-btn" id="btn-colwidth-auto" type="button">Auto</button>
       </div>
       <div class="tx-grid-wrap"><div id="grid"></div></div>
+      <details class="tx-import-latex" id="import-latex-panel">
+        <summary>Importar código LaTeX</summary>
+        <p class="tx-hint">Pega el código de un <code>tabular</code>, <code>tabularx</code> o
+        <code>longtable</code> (con o sin entorno <code>table</code>) y se carga en la
+        cuadrícula: texto, formato, fusiones, bordes, anchos y colores.</p>
+        <textarea id="latex-input" rows="6" spellcheck="false"
+          placeholder="\\begin{tabular}{lll}&#10;A &amp; B &amp; C \\\\&#10;\\end{tabular}"></textarea>
+        <div class="tx-actions">
+          <button class="tx-btn tx-btn--primary" id="btn-import-latex-go" type="button">Importar</button>
+          <span class="tx-size" id="import-latex-msg"></span>
+        </div>
+      </details>
       <p class="tx-hint">Haz clic en una celda y escribe. <kbd>Tab</kbd> pasa a la siguiente,
       <kbd>Enter</kbd> baja una fila y las flechas se mueven entre celdas.
       <kbd>Shift</kbd> + clic selecciona un rango.</p>
@@ -346,6 +360,50 @@ fileInput.addEventListener('change', () => {
       }, 4000)
     })
 })
+
+// -- importar LaTeX -----------------------------------------------------------
+
+const latexPanel = document.querySelector<HTMLDetailsElement>('#import-latex-panel')!
+const latexInput = document.querySelector<HTMLTextAreaElement>('#latex-input')!
+const latexMsg = document.querySelector<HTMLSpanElement>('#import-latex-msg')!
+document
+  .querySelector<HTMLButtonElement>('#btn-import-latex')!
+  .addEventListener('click', () => {
+    latexPanel.open = !latexPanel.open
+    if (latexPanel.open) latexInput.focus()
+  })
+document
+  .querySelector<HTMLButtonElement>('#btn-import-latex-go')!
+  .addEventListener('click', () => {
+    const code = latexInput.value
+    if (code.trim() === '') {
+      latexMsg.textContent = 'Pega primero el código LaTeX.'
+      return
+    }
+    try {
+      const parsed = parseLatex(code)
+      editor.setTable(parsed.table)
+      setFormat(parsed.style === 'booktabs' ? 'booktabs' : 'latex')
+      captionInput.value = parsed.caption
+      labelInput.value = parsed.label
+      tabularxInput.checked = parsed.tabularx
+      headerInput.checked = parsed.headerRow
+      updateCode()
+      updateSize()
+      const notes = [
+        `Importado: ${parsed.table.rows} × ${parsed.table.cols}.`,
+        ...(parsed.longtable
+          ? ['Es una tabla larga: de momento se edita como tabla normal.']
+          : []),
+        ...parsed.warnings,
+      ]
+      latexMsg.textContent = notes.join(' ')
+      track('table-import-latex')
+    } catch (err: unknown) {
+      latexMsg.textContent =
+        err instanceof Error ? err.message : 'No se pudo importar el código.'
+    }
+  })
 
 for (const input of [captionInput, labelInput]) {
   input.addEventListener('input', updateCode)
