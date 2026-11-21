@@ -3,17 +3,12 @@ services:
     build: .
     container_name: tablex
     restart: unless-stopped
-    # Servir por HTTP directo en el host (para pruebas locales):
-    ports:
-      - "8080:80"
-    # Cuando se publique, activar estas etiquetas de Traefik
-    # (revisar el nombre de la red según /srv/traefik). La app se sirve
-    # bajo /herramientas/tablex; el middleware quita el prefijo antes
-    # de llegar a nginx, que sirve desde su raíz:
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.tablex.rule=PathPrefix(`/herramientas/tablex`)"
-    #   - "traefik.http.middlewares.tablex-strip.stripprefix.prefixes=/herramientas/tablex"
-    #   - "traefik.http.routers.tablex.middlewares=tablex-strip"
-    #   - "traefik.http.routers.tablex.entrypoints=websecure"
-    #   - "traefik.http.routers.tablex.tls.certresolver=cloudflare"
+    networks:
+      - sky-net
+    # Sin puertos publicados: el acceso público llega por el túnel de
+    # Cloudflare (ver README). Para probar en local:
+    #   docker run --rm --network sky-net -p 127.0.0.1:8080:80 tablex
+
+networks:
+  sky-net:
+    external: true

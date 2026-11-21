@@ -16,6 +16,12 @@ el código en vivo, sin que los datos salgan del navegador.
   (tablas recientes) y nada más.
 - **Despliegue:** imagen Docker multi-etapa (Node build → nginx:alpine).
   Consumo: unos MB de RAM, CPU ~0 en reposo; solo sirve archivos estáticos.
+  El contenedor vive en Skynet (`/home/rixuko/herramientas/tablex/`), en la
+  red `sky-net`, y el acceso público llega por el **túnel de Cloudflare**
+  (no por Traefik: Traefik solo sirve los servicios de NetBird). La ruta
+  pública es `reoxlab.com/herramientas/tablex` y exige una regla en Zero
+  Trust (paso manual de Francisco). `nginx.conf` sirve la app bajo ese
+  prefijo, porque el túnel reenvía la ruta completa sin recortarla.
 
 ## Modelo de datos
 

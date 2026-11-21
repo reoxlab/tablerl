@@ -25,14 +25,28 @@ npm run preview  # sirve dist/ para comprobar el build
 
 ## Despliegue
 
-Imagen Docker multi-etapa (Node para el build, nginx:alpine para servir):
+Imagen Docker multi-etapa (Node para el build, nginx:alpine para servir).
+El despliegue vive en Skynet en `/home/rixuko/herramientas/tablex/`:
 
 ```bash
 docker compose up -d --build
 ```
 
-Ver `docker-compose.yml`. La ruta pública (subdominio o subruta) está pendiente
-de decisión; las etiquetas de Traefik van comentadas hasta entonces.
+La app se sirve bajo el prefijo `/herramientas/tablex/` (ver `nginx.conf`:
+el túnel de Cloudflare reenvía la ruta completa, sin recortarla).
+
+**Paso manual en Cloudflare Zero Trust** (lo hace Francisco, el token de
+Muse no tiene permisos de túnel): en el túnel de reoxlab.com, añadir un
+hostname público `reoxlab.com` con ruta `/herramientas/tablex/*` que apunte
+al servicio `http://tablex:80`. Sin esa regla, el contenedor corre pero
+nadie llega a él desde fuera.
+
+**Probar en local** (sin publicar):
+
+```bash
+docker run --rm --network sky-net -p 127.0.0.1:8080:80 tablex
+# abrir http://127.0.0.1:8080/herramientas/tablex/
+```
 
 ## Formatos (objetivo)
 
