@@ -37,6 +37,8 @@ export interface LatexOptions {
   headerRow: boolean
   escape: boolean
   tabularx: boolean
+  /** Tabla larga: entorno longtable con encabezado repetido (incompatible con tabularx). */
+  longtable: boolean
 }
 
 const ESCAPES: Record<string, string> = {
@@ -232,7 +234,8 @@ export function toLatex(table: TableModel, opts: LatexOptions): string {
   const usesMultirow = table.cells.some((row) =>
     row.some((cell) => !cell.coveredBy && cell.rowspan > 1),
   )
-  const usesTabularx = opts.tabularx
+  const usesLongtable = opts.longtable
+  const usesTabularx = opts.tabularx && !usesLongtable
 
   const colSpec =
     opts.style === 'booktabs'
@@ -241,22 +244,30 @@ export function toLatex(table: TableModel, opts: LatexOptions): string {
           .join('')
       : columnSpecWithBars(table, aligns, usesTabularx, needs)
 
-  const envOpen = usesTabularx
-    ? `\\begin{tabularx}{\\textwidth}{${colSpec}}`
-    : `\\begin{tabular}{${colSpec}}`
-  const envClose = usesTabularx ? '\\end{tabularx}' : '\\end{tabular}'
+  const envOpen = usesLongtable
+    ? `\\begin{longtable}{${colSpec}}`
+    : usesTabularx
+      ? `\\begin{tabularx}{\\textwidth}{${colSpec}}`
+      : `\\begin{tabular}{${colSpec}}`
+  const envClose = usesLongtable
+    ? '\\end{longtable}'
+    : usesTabularx
+      ? '\\end{tabularx}'
+      : '\\end{tabular}'
 
   const lines: string[] = []
   const notes: string[] = []
   if (usesMultirow) notes.push('\\usepackage{multirow}')
   if (usesTabularx) notes.push('\\usepackage{tabularx}')
+  if (usesLongtable) notes.push('\\usepackage{longtable}')
   if (needs.array) notes.push('\\usepackage{array}')
   // El color de fondo se detecta al dibujar las filas (ver abajo).
   if (notes.length > 0) {
     lines.push(`% Nota: esta tabla necesita en el preámbulo: ${notes.join(', ')}.`)
   }
 
-  const inTableEnv = opts.centered || opts.caption.trim() !== ''
+  const inTableEnv =
+    !usesLongtable && (opts.centered || opts.caption.trim() !== '')
   if (inTableEnv) {
     lines.push('\\begin{table}[htbp]')
     if (opts.centered) lines.push('\\centering')
@@ -269,29 +280,69 @@ export function toLatex(table: TableModel, opts: LatexOptions): string {
   }
 
   lines.push(envOpen)
-  if (opts.style === 'booktabs') lines.push('\\toprule')
 
-  for (let r = 0; r < table.rows; r++) {
-    if (opts.style === 'standard' && r === 0) {
-      const top = table.cells[0].some(
-        (cell) => !cell.coveredBy && cell.borders.top,
-      )
-      if (top) lines.push('\\hline')
+  /** Reglas horizontales tras la fila r (estándar; booktabs solo el \midrule del encabezado). */
+  const rowRules = (r: number): string[] => {
+    if (opts.style === 'booktabs') {
+      return r === 0 && opts.headerRow ? ['\\midrule'] : []
     }
-    lines.push(renderRow(table, r, opts, needs))
-    if (opts.style === 'standard') {
-      const runs = bottomRuns(table, r)
-      if (runs.length === 1 && runs[0][0] === 1 && runs[0][1] === table.cols) {
-        lines.push('\\hline')
-      } else {
-        for (const [a, b] of runs) lines.push(`\\cline{${a}-${b}}`)
+    const runs = bottomRuns(table, r)
+    if (runs.length === 1 && runs[0][0] === 1 && runs[0][1] === table.cols) {
+      return ['\\hline']
+    }
+    return runs.map(([a, b]) => `\\cline{${a}-${b}}`)
+  }
+  /** Regla superior (booktabs: \toprule; estándar: \hline si la fila 0 la lleva). */
+  const topRule = (): string[] => {
+    if (opts.style === 'booktabs') return ['\\toprule']
+    const top = table.cells[0].some(
+      (cell) => !cell.coveredBy && cell.borders.top,
+    )
+    return top ? ['\\hline'] : []
+  }
+  /** Regla del pie de longtable (la última línea de cada página). */
+  const footRule = (): string =>
+    opts.style === 'booktabs' ? '\\bottomrule' : '\\hline'
+
+  if (usesLongtable) {
+    // El título va dentro del entorno, seguido de \\.
+    if (opts.caption.trim() !== '' || opts.label.trim() !== '') {
+      let cap = ''
+      if (opts.caption.trim() !== '') {
+        cap += `\\caption{${opts.escape ? escapeLatex(opts.caption) : opts.caption}}`
       }
-    } else if (r === 0 && opts.headerRow) {
-      lines.push('\\midrule')
+      if (opts.label.trim() !== '') cap += `\\label{${opts.label.trim()}}`
+      lines.push(`${cap} \\\\`)
     }
+    const firstRow = opts.headerRow ? 1 : 0
+    if (opts.headerRow && table.rows > 0) {
+      lines.push(...topRule())
+      lines.push(renderRow(table, 0, opts, needs))
+      lines.push(...rowRules(0))
+      lines.push('\\endfirsthead')
+      lines.push(renderRow(table, 0, opts, needs))
+      lines.push(...rowRules(0))
+      lines.push('\\endhead')
+      lines.push(footRule())
+      lines.push('\\endfoot')
+      lines.push(footRule())
+      lines.push('\\endlastfoot')
+    }
+    for (let r = firstRow; r < table.rows; r++) {
+      lines.push(renderRow(table, r, opts, needs))
+      // La última fila no lleva regla: la pone el pie (\endfoot/\endlastfoot).
+      if (r < table.rows - 1) lines.push(...rowRules(r))
+    }
+  } else {
+    if (opts.style === 'booktabs') lines.push('\\toprule')
+    for (let r = 0; r < table.rows; r++) {
+      if (opts.style === 'standard' && r === 0) lines.push(...topRule())
+      lines.push(renderRow(table, r, opts, needs))
+      lines.push(...rowRules(r))
+    }
+    if (opts.style === 'booktabs') lines.push('\\bottomrule')
   }
 
-  if (opts.style === 'booktabs') lines.push('\\bottomrule')
   lines.push(envClose)
   if (inTableEnv) lines.push('\\end{table}')
 

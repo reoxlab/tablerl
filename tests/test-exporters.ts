@@ -26,6 +26,7 @@ const latexStd = toLatex(t, {
   headerRow: true,
   escape: true,
   tabularx: false,
+  longtable: false,
 })
 const latexBook = toLatex(t, {
   style: 'booktabs',
@@ -35,6 +36,7 @@ const latexBook = toLatex(t, {
   headerRow: true,
   escape: true,
   tabularx: false,
+  longtable: false,
 })
 const md = toMarkdown(t, { escape: true })
 
@@ -56,6 +58,7 @@ const latexMerged = toLatex(m, {
   headerRow: true,
   escape: true,
   tabularx: false,
+  longtable: false,
 })
 const typst = toTypst(t, {
   caption: 'Masas atómicas',
@@ -102,6 +105,7 @@ const latexB = toLatex(b, {
   headerRow: true,
   escape: true,
   tabularx: false,
+  longtable: false,
 })
 const latexBx = toLatex(b, {
   style: 'standard',
@@ -111,6 +115,7 @@ const latexBx = toLatex(b, {
   headerRow: true,
   escape: true,
   tabularx: true,
+  longtable: false,
 })
 const typstB = toTypst(b, {
   caption: '',
@@ -177,5 +182,31 @@ writeFileSync('/tmp/tabla-prueba-fusion.tex', latexMerged)
 writeFileSync('/tmp/tabla-parte2.tex', latexB)
 writeFileSync('/tmp/tabla-parte2-tabularx.tex', latexBx)
 writeFileSync('/tmp/tabla-parte2.typ', typstB)
+writeFileSync(
+  '/tmp/tabla-larga.tex',
+  toLatex(t, {
+    style: 'standard',
+    caption: 'Masas atómicas',
+    label: 'tab:masas',
+    centered: false,
+    headerRow: true,
+    escape: true,
+    tabularx: false,
+    longtable: true,
+  }),
+)
+writeFileSync(
+  '/tmp/tabla-larga-booktabs.tex',
+  toLatex(t, {
+    style: 'booktabs',
+    caption: 'Masas atómicas',
+    label: 'tab:masas',
+    centered: false,
+    headerRow: true,
+    escape: true,
+    tabularx: false,
+    longtable: true,
+  }),
+)
 if (failed > 0) process.exit(1)
 console.log('\nTodas las comprobaciones pasaron.')

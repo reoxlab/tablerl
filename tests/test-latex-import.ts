@@ -69,6 +69,7 @@ const stdOpts = {
   headerRow: true,
   escape: true,
   tabularx: false,
+  longtable: false,
 }
 const stdCode = toLatex(t, stdOpts)
 const stdBack = parseLatex(stdCode)
@@ -124,6 +125,7 @@ const xOpts = {
   headerRow: false,
   escape: true,
   tabularx: true,
+  longtable: false,
 }
 const xCode = toLatex(x, xOpts)
 const xBack = parseLatex(xCode)
@@ -134,6 +136,24 @@ check(
   toLatex(xBack.table, xOpts) === xCode,
   `\n--- original ---\n${xCode}\n--- re-exportado ---\n${toLatex(xBack.table, xOpts)}`,
 )
+
+// ---------------------------------------------------------------------------
+// 4b. Exportar longtable y su ida y vuelta (estándar y booktabs).
+// ---------------------------------------------------------------------------
+const ltOpts = { ...stdOpts, longtable: true }
+const ltCode = toLatex(t, ltOpts)
+check('longtable export: entorno', ltCode.includes('\\begin{longtable}{|l|c|r|}'))
+check('longtable export: repetición de encabezado', ltCode.includes('\\endfirsthead') && ltCode.includes('\\endhead'))
+check('longtable export: pies', ltCode.includes('\\endfoot') && ltCode.includes('\\endlastfoot'))
+check('longtable export: nota del paquete', ltCode.includes('\\usepackage{longtable}'))
+check('longtable export: caption dentro', ltCode.includes('\\caption{Masas atómicas}\\label{tab:masas} \\\\'))
+check('longtable export: sin entorno table', !ltCode.includes('\\begin{table}'))
+const ltBack = parseLatex(ltCode)
+check('longtable export: modelo idéntico (con bordes)', project(t, true) === project(ltBack.table, true))
+check('longtable export: re-exportar da el mismo código', toLatex(ltBack.table, ltOpts) === ltCode)
+const ltBookCode = toLatex(t, { ...bookOpts, longtable: true })
+check('longtable booktabs: toprule y bottomrule', ltBookCode.includes('\\toprule') && ltBookCode.includes('\\bottomrule'))
+check('longtable booktabs: ida y vuelta', toLatex(parseLatex(ltBookCode).table, { ...bookOpts, longtable: true }) === ltBookCode)
 
 // ---------------------------------------------------------------------------
 // 4. Tabla larga escrita a mano, con repetición de encabezado.

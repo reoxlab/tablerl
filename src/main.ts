@@ -111,6 +111,7 @@ app.innerHTML = `
         <label><input type="checkbox" id="opt-header" checked /> Primera fila: encabezado</label>
         <label><input type="checkbox" id="opt-escape" checked /> Escapar caracteres</label>
         <label><input type="checkbox" id="opt-tabularx" /> Ajustar al ancho (tabularx)</label>
+        <label><input type="checkbox" id="opt-longtable" /> Tabla larga (longtable)</label>
       </div>
       <pre class="tx-code"><code id="code"></code></pre>
       <div class="tx-actions">
@@ -140,6 +141,7 @@ const centeredInput = document.querySelector<HTMLInputElement>('#opt-centered')!
 const headerInput = document.querySelector<HTMLInputElement>('#opt-header')!
 const escapeInput = document.querySelector<HTMLInputElement>('#opt-escape')!
 const tabularxInput = document.querySelector<HTMLInputElement>('#opt-tabularx')!
+const longtableInput = document.querySelector<HTMLInputElement>('#opt-longtable')!
 const bgInput = document.querySelector<HTMLInputElement>('#opt-bg')!
 const colwidthInput = document.querySelector<HTMLInputElement>('#opt-colwidth')!
 const copiedMsg = document.querySelector<HTMLSpanElement>('#copied-msg')!
@@ -153,6 +155,7 @@ function latexOptions(): LatexOptions {
     headerRow: headerInput.checked,
     escape: escapeInput.checked,
     tabularx: tabularxInput.checked,
+    longtable: longtableInput.checked,
   }
 }
 
@@ -185,16 +188,17 @@ function updateSize(): void {
 }
 
 function updateLatexOptionsEnabled(): void {
-  // Título y etiqueta valen en LaTeX y en Typst (figure); centrado y
-  // tabularx solo en LaTeX; encabezado en LaTeX y Typst. Markdown no usa
-  // ninguna.
+  // Título y etiqueta valen en LaTeX y en Typst (figure); centrado,
+  // tabularx y longtable solo en LaTeX; encabezado en LaTeX y Typst.
+  // Markdown no usa ninguna. longtable y tabularx son excluyentes.
   const isMarkdown = format === 'markdown'
   const isLatex = format === 'latex' || format === 'booktabs'
   captionInput.disabled = isMarkdown
   labelInput.disabled = isMarkdown
   centeredInput.disabled = !isLatex
   headerInput.disabled = isMarkdown
-  tabularxInput.disabled = !isLatex
+  tabularxInput.disabled = !isLatex || longtableInput.checked
+  longtableInput.disabled = !isLatex || tabularxInput.checked
 }
 
 const editor = new GridEditor(gridHost, table, {
@@ -387,14 +391,13 @@ document
       captionInput.value = parsed.caption
       labelInput.value = parsed.label
       tabularxInput.checked = parsed.tabularx
+      longtableInput.checked = parsed.longtable
       headerInput.checked = parsed.headerRow
+      updateLatexOptionsEnabled()
       updateCode()
       updateSize()
       const notes = [
         `Importado: ${parsed.table.rows} × ${parsed.table.cols}.`,
-        ...(parsed.longtable
-          ? ['Es una tabla larga: de momento se edita como tabla normal.']
-          : []),
         ...parsed.warnings,
       ]
       latexMsg.textContent = notes.join(' ')
@@ -408,9 +411,18 @@ document
 for (const input of [captionInput, labelInput]) {
   input.addEventListener('input', updateCode)
 }
-for (const input of [centeredInput, headerInput, escapeInput, tabularxInput]) {
+for (const input of [centeredInput, headerInput, escapeInput, tabularxInput, longtableInput]) {
   input.addEventListener('change', updateCode)
 }
+// longtable y tabularx son excluyentes: marcar una desmarca la otra.
+tabularxInput.addEventListener('change', () => {
+  if (tabularxInput.checked) longtableInput.checked = false
+  updateLatexOptionsEnabled()
+})
+longtableInput.addEventListener('change', () => {
+  if (longtableInput.checked) tabularxInput.checked = false
+  updateLatexOptionsEnabled()
+})
 
 // -- bordes, fondo y anchos (v0.2 parte 2) ------------------------------------
 

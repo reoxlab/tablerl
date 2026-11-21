@@ -310,10 +310,23 @@ export function parseLatex(code: string): ParsedLatex {
   let current = ''
   let i = 0
   let pendingHlineTop = false
+  // En longtable, las reglas entre \endhead y la primera fila del cuerpo
+  // son el pie (\endfoot/\endlastfoot): pertenecen a la ÚLTIMA fila, que
+  // aún no se ha leído. Se guardan aparte y se aplican al final.
+  let headJustEnded = false
+  let bodyRowsStarted = false
+  let lastRowBottom = false
+  const lastRowClines: [number, number][] = []
 
   const flushRow = () => {
     const trimmed = current.trim()
-    if (trimmed !== '') rows.push(trimmed)
+    if (trimmed !== '') {
+      rows.push(trimmed)
+      if (headJustEnded) {
+        bodyRowsStarted = true
+        headJustEnded = false
+      }
+    }
     current = ''
   }
 
@@ -328,17 +341,26 @@ export function parseLatex(code: string): ParsedLatex {
       continue
     }
     if (body.startsWith('\\hline', i)) {
-      if (rows.length === 0 && current.trim() === '') pendingHlineTop = true
-      else hlinesAfter.add(rows.length - 1)
+      if (headJustEnded && !bodyRowsStarted) {
+        lastRowBottom = true
+      } else if (rows.length === 0 && current.trim() === '') {
+        pendingHlineTop = true
+      } else {
+        hlinesAfter.add(rows.length - 1)
+      }
       i += 6
       continue
     }
     const cline = body.slice(i).match(/^\\cline\{(\d+)-(\d+)\}/)
     if (cline) {
-      const r = rows.length - 1
-      const list = clinesAfter.get(r) ?? []
-      list.push([parseInt(cline[1], 10), parseInt(cline[2], 10)])
-      clinesAfter.set(r, list)
+      if (headJustEnded && !bodyRowsStarted) {
+        lastRowClines.push([parseInt(cline[1], 10), parseInt(cline[2], 10)])
+      } else {
+        const r = rows.length - 1
+        const list = clinesAfter.get(r) ?? []
+        list.push([parseInt(cline[1], 10), parseInt(cline[2], 10)])
+        clinesAfter.set(r, list)
+      }
       i += cline[0].length
       continue
     }
@@ -356,7 +378,8 @@ export function parseLatex(code: string): ParsedLatex {
     }
     if (body.startsWith('\\bottomrule', i)) {
       booktabs = true
-      hlinesAfter.add(rows.length - 1)
+      if (headJustEnded && !bodyRowsStarted) lastRowBottom = true
+      else hlinesAfter.add(rows.length - 1)
       i += 11
       continue
     }
@@ -375,6 +398,8 @@ export function parseLatex(code: string): ParsedLatex {
         if (endHead !== -1) {
           i = endHead + '\\endhead'.length
           current = ''
+          headJustEnded = true
+          bodyRowsStarted = false
           continue
         }
       }
@@ -443,6 +468,18 @@ export function parseLatex(code: string): ParsedLatex {
         table.cells[r][c].borders.bottom = true
         if (r + 1 < rows.length) table.cells[r + 1][c].borders.top = true
       }
+    }
+  }
+  // El pie de longtable (\endfoot/\endlastfoot) es el borde inferior de
+  // la última fila.
+  if (lastRowBottom && rows.length > 0) {
+    for (let c = 0; c < ncols; c++) {
+      table.cells[rows.length - 1][c].borders.bottom = true
+    }
+  }
+  for (const [a, b] of lastRowClines) {
+    for (let c = a - 1; c <= b - 1 && c < ncols; c++) {
+      table.cells[rows.length - 1][c].borders.bottom = true
     }
   }
 
