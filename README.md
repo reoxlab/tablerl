@@ -36,5 +36,5 @@ de decisión; las etiquetas de Traefik van comentadas hasta entonces.
 
 ## Formatos (objetivo)
 
-LaTeX (estándar y booktabs) · HTML · Markdown · texto plano · Typst ·
-MediaWiki · AsciiDoc. Importar CSV / XLSX y leer código LaTeX de vuelta.
+LaTeX (estándar y booktabs) · Markdown · Typst. Pegar celdas desde Excel /
+Google Sheets, importar XLSX y leer código LaTeX de vuelta.

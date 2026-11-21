@@ -6,10 +6,14 @@ services:
     # Servir por HTTP directo en el host (para pruebas locales):
     ports:
       - "8080:80"
-    # Cuando se decida la URL pública, quitar ports: y activar estas
-    # etiquetas de Traefik (revisar el nombre de la red según /srv/traefik):
+    # Cuando se publique, activar estas etiquetas de Traefik
+    # (revisar el nombre de la red según /srv/traefik). La app se sirve
+    # bajo /herramientas/tablex; el middleware quita el prefijo antes
+    # de llegar a nginx, que sirve desde su raíz:
     # labels:
     #   - "traefik.enable=true"
-    #   - "traefik.http.routers.tablex.rule=Host(`tablex.reoxlab.com`)"
+    #   - "traefik.http.routers.tablex.rule=PathPrefix(`/herramientas/tablex`)"
+    #   - "traefik.http.middlewares.tablex-strip.stripprefix.prefixes=/herramientas/tablex"
+    #   - "traefik.http.routers.tablex.middlewares=tablex-strip"
     #   - "traefik.http.routers.tablex.entrypoints=websecure"
     #   - "traefik.http.routers.tablex.tls.certresolver=cloudflare"
