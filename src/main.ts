@@ -27,6 +27,7 @@ import { toMarkdown } from './exporters/markdown'
 import { toTypst } from './exporters/typst'
 import { importXlsx } from './importers/xlsx'
 import { parseLatex } from './importers/latex'
+import { openInOverleaf } from './overleaf'
 
 type Format = 'latex' | 'booktabs' | 'markdown' | 'typst'
 
@@ -117,6 +118,7 @@ app.innerHTML = `
       <div class="tx-actions">
         <button class="tx-btn tx-btn--primary" id="btn-copy" type="button">Copiar código</button>
         <button class="tx-btn" id="btn-download" type="button">Descargar</button>
+        <button class="tx-btn" id="btn-overleaf" type="button">Abrir en Overleaf</button>
         <span class="tx-copied" id="copied-msg" hidden>¡Copiado!</span>
       </div>
     </section>
@@ -252,6 +254,9 @@ function setFormat(next: Format): void {
       : next === 'typst'
         ? 'Descargar .typ'
         : 'Descargar .tex'
+  // Overleaf solo tiene sentido con LaTeX.
+  document.querySelector<HTMLButtonElement>('#btn-overleaf')!.hidden =
+    next === 'markdown' || next === 'typst'
   updateLatexOptionsEnabled()
   updateCode()
 }
@@ -514,6 +519,12 @@ document
 document
   .querySelector<HTMLButtonElement>('#btn-download')!
   .addEventListener('click', downloadCode)
+document
+  .querySelector<HTMLButtonElement>('#btn-overleaf')!
+  .addEventListener('click', () => {
+    openInOverleaf(generate())
+    track('table-overleaf')
+  })
 
 updateSize()
 updateLatexOptionsEnabled()
