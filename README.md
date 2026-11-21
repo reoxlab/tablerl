@@ -7,7 +7,7 @@ generado en vivo. Sin cuentas, sin servidor, sin que tus datos salgan del navega
 
 - **Web:** https://reoxlab.com/herramientas/tablex (pendiente de publicar)
 - **Demo local:** `npm install && npm run dev`
-- **Licencia:** MIT
+- **Licencia:** GPL v3 (todo derivado sigue libre)
 
 ## Estado
 
