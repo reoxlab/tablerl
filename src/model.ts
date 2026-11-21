@@ -74,3 +74,46 @@ export function emptyTable(rows = 3, cols = 3): TableModel {
     colWidths: Array.from({ length: cols }, () => null),
   }
 }
+
+// ---------------------------------------------------------------------------
+// Operaciones de edición (mutan el modelo; el editor las llama y vuelve a
+// dibujar la cuadrícula). Las filas/columnas nunca bajan de 1.
+// ---------------------------------------------------------------------------
+
+export function addRow(table: TableModel, index: number): void {
+  const at = Math.max(0, Math.min(index, table.rows))
+  table.cells.splice(
+    at,
+    0,
+    Array.from({ length: table.cols }, () => emptyCell()),
+  )
+  table.rows += 1
+}
+
+export function deleteRow(table: TableModel, index: number): void {
+  if (table.rows <= 1) return
+  const at = Math.max(0, Math.min(index, table.rows - 1))
+  table.cells.splice(at, 1)
+  table.rows -= 1
+}
+
+export function addCol(table: TableModel, index: number): void {
+  const at = Math.max(0, Math.min(index, table.cols))
+  for (const row of table.cells) row.splice(at, 0, emptyCell())
+  table.colWidths.splice(at, 0, null)
+  table.cols += 1
+}
+
+export function deleteCol(table: TableModel, index: number): void {
+  if (table.cols <= 1) return
+  const at = Math.max(0, Math.min(index, table.cols - 1))
+  for (const row of table.cells) row.splice(at, 1)
+  table.colWidths.splice(at, 1)
+  table.cols -= 1
+}
+
+export function clearTable(table: TableModel): void {
+  for (const row of table.cells) {
+    for (let c = 0; c < row.length; c++) row[c] = emptyCell()
+  }
+}
