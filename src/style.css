@@ -1,0 +1,487 @@
+/* TableX — estilos con la marca Reox Lab (vino, dorado, carbón). */
+
+:root {
+  --vino: #80001e;
+  --vino-oscuro: #5f0016;
+  --dorado: #cca757;
+  --carbon: #131315;
+  --fondo: #ffffff;
+  --fondo-suave: #faf7f2;
+  --borde: #efe9df;
+  --borde-fuerte: #ddd5c7;
+  --texto-suave: #5b5560;
+  --radio: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Montserrat, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--carbon);
+  background: var(--fondo);
+}
+
+a {
+  color: var(--vino);
+}
+
+/* -- encabezado ----------------------------------------------------------- */
+
+.tx-header {
+  border-bottom: 1px solid var(--borde);
+  background: var(--fondo);
+}
+
+.tx-header-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 1.1rem 1rem 1rem;
+}
+
+.tx-brand {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tx-brand:hover {
+  text-decoration: underline;
+}
+
+.tx-header h1 {
+  margin: 0.35rem 0 0;
+  color: var(--vino);
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.tx-tagline {
+  margin: 0.25rem 0 0;
+  color: var(--texto-suave);
+  font-size: 0.95rem;
+}
+
+/* -- layout ---------------------------------------------------------------- */
+
+.tx-main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .tx-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tx-panel {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--fondo);
+  overflow: hidden;
+}
+
+.tx-panel-title {
+  margin: 0;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vino);
+  background: var(--fondo-suave);
+  border-bottom: 1px solid var(--borde);
+}
+
+/* -- barra de herramientas -------------------------------------------------- */
+
+.tx-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--borde);
+  align-items: center;
+}
+
+.tx-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--carbon);
+  cursor: pointer;
+}
+
+.tx-btn:hover:not(:disabled) {
+  border-color: var(--vino);
+  color: var(--vino);
+}
+
+.tx-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.tx-btn--primary {
+  background: var(--vino);
+  border-color: var(--vino);
+  color: #fff;
+}
+
+.tx-btn--primary:hover:not(:disabled) {
+  background: var(--vino-oscuro);
+  color: #fff;
+}
+
+.tx-btn--gold {
+  background: var(--dorado);
+  border-color: var(--dorado);
+  color: var(--carbon);
+}
+
+.tx-btn--active {
+  background: var(--vino);
+  border-color: var(--vino);
+  color: #fff;
+}
+
+.tx-btn--active:hover:not(:disabled) {
+  background: var(--vino-oscuro);
+  color: #fff;
+}
+
+.tx-toolbar--format {
+  border-top: 1px solid var(--borde);
+  background: var(--fondo-suave);
+}
+
+.tx-btn--fmt {
+  min-width: 2.1rem;
+  text-align: center;
+}
+
+.tx-size {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+
+/* -- cuadrícula -------------------------------------------------------------- */
+
+.tx-grid-wrap {
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.tx-grid {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.tx-cell {
+  min-width: 110px;
+  height: 2.4rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px dashed #e8e2d8;
+  font: inherit;
+  font-size: 0.92rem;
+  outline: none;
+  vertical-align: middle;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.tx-cell:hover {
+  background: var(--fondo-suave);
+}
+
+.tx-cell--active {
+  outline: 2px solid var(--dorado);
+  outline-offset: -2px;
+}
+
+.tx-cell--selected {
+  background: #fdf6ec;
+}
+
+/* Bordes del modelo: línea sólida donde la celda lleva borde; la rejilla
+   punteada de base sigue visible donde no lo lleva (solo para editar). */
+.tx-cell--b-top {
+  border-top: 2px solid var(--carbon);
+}
+
+.tx-cell--b-right {
+  border-right: 2px solid var(--carbon);
+}
+
+.tx-cell--b-bottom {
+  border-bottom: 2px solid var(--carbon);
+}
+
+.tx-cell--b-left {
+  border-left: 2px solid var(--carbon);
+}
+
+.tx-cell--bold {
+  font-weight: 700;
+}
+
+.tx-cell--italic {
+  font-style: italic;
+}
+
+.tx-cell--center {
+  text-align: center;
+}
+
+.tx-cell--right {
+  text-align: right;
+}
+
+.tx-hint {
+  margin: 0;
+  padding: 0 1rem 0.9rem;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+  line-height: 1.5;
+}
+
+.tx-hint kbd {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid var(--borde-fuerte);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  background: var(--fondo-suave);
+}
+
+/* -- panel de código --------------------------------------------------------- */
+
+.tx-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.tx-tab {
+  flex: 1;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.65rem 0.4rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--texto-suave);
+  cursor: pointer;
+}
+
+.tx-tab:hover {
+  color: var(--vino);
+}
+
+.tx-tab--active {
+  color: var(--vino);
+  border-bottom-color: var(--vino);
+}
+
+.tx-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--borde);
+  font-size: 0.85rem;
+  align-items: center;
+}
+
+.tx-options label {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.tx-options input[type='text'] {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 6px;
+  width: 9.5rem;
+}
+
+.tx-options input[type='text']:disabled {
+  background: var(--fondo-suave);
+  color: var(--texto-suave);
+}
+
+.tx-options input[type='number'] {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 6px;
+  width: 4.5rem;
+}
+
+.tx-color-label {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.tx-color-label input[type='color'] {
+  width: 2rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.tx-code {
+  margin: 0;
+  padding: 1rem;
+  min-height: 22rem;
+  max-height: 34rem;
+  overflow: auto;
+  background: var(--carbon);
+  color: #f3ead9;
+  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, Consolas,
+    monospace;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.tx-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  align-items: center;
+}
+
+/* -- importar LaTeX (v0.3) --------------------------------------------------- */
+
+.tx-import-latex {
+  margin-top: 0.75rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.tx-import-latex summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.tx-import-latex textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 6px;
+  background: var(--carbon);
+  color: #f3ead9;
+  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', Menlo, Consolas,
+    monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.tx-import-latex .tx-actions {
+  padding: 0.5rem 0 0.25rem;
+}
+
+/* -- tablas recientes (v0.3) ------------------------------------------------- */
+
+.tx-recents {
+  margin-top: 0.75rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.tx-recents summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.tx-recents .tx-actions {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.tx-recents-list {
+  list-style: none;
+  margin: 0.5rem 0 0.25rem;
+  padding: 0;
+}
+
+.tx-recents-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--borde);
+  font-size: 0.9rem;
+}
+
+.tx-recents-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tx-recents-date {
+  color: var(--texto-suave);
+  font-size: 0.82rem;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.tx-recents-empty {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+}
+
+.tx-copied {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--vino);
+}
+
+/* -- pie --------------------------------------------------------------------- */
+
+.tx-footer {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+  line-height: 1.6;
+}

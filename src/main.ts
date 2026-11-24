@@ -24,8 +24,19 @@ import { emptyTable } from './model'
 import { GridEditor } from './editor'
 import { toLatex, type LatexOptions } from './exporters/latex'
 import { toMarkdown } from './exporters/markdown'
+import { toTypst } from './exporters/typst'
+import { importXlsx } from './importers/xlsx'
+import { parseLatex } from './importers/latex'
+import { openInOverleaf } from './overleaf'
+import {
+  autosave,
+  deleteRecent,
+  loadAutosave,
+  loadRecents,
+  saveRecent,
+} from './recents'
 
-type Format = 'latex' | 'booktabs' | 'markdown'
+type Format = 'latex' | 'booktabs' | 'markdown' | 'typst'
 
 const app = document.querySelector<HTMLDivElement>('#app')
 if (!app) throw new Error('Falta #app en index.html')
@@ -51,7 +62,55 @@ app.innerHTML = `
         <button class="tx-btn" id="btn-clear" type="button">Limpiar</button>
         <span class="tx-size" id="size-badge">3 × 3</span>
       </div>
+      <div class="tx-toolbar tx-toolbar--format">
+        <button class="tx-btn tx-btn--fmt" id="btn-bold" type="button" title="Negrita"><strong>B</strong></button>
+        <button class="tx-btn tx-btn--fmt" id="btn-italic" type="button" title="Cursiva"><em>I</em></button>
+        <button class="tx-btn tx-btn--fmt" id="btn-align-left" type="button" title="Alinear a la izquierda">⇤</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-align-center" type="button" title="Centrar">⇔</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-align-right" type="button" title="Alinear a la derecha">⇥</button>
+        <button class="tx-btn" id="btn-merge" type="button">Fusionar</button>
+        <button class="tx-btn" id="btn-unmerge" type="button">Separar</button>
+        <button class="tx-btn" id="btn-import-xlsx" type="button">Importar XLSX</button>
+        <input type="file" id="file-xlsx" accept=".xlsx,.xls" hidden />
+        <button class="tx-btn" id="btn-import-latex" type="button">Importar LaTeX</button>
+        <span class="tx-size" id="import-msg"></span>
+      </div>
+      <div class="tx-toolbar tx-toolbar--format">
+        <button class="tx-btn" id="btn-borders-all" type="button">Todos los bordes</button>
+        <button class="tx-btn" id="btn-borders-none" type="button">Sin bordes</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-border-top" type="button" title="Borde superior">↑</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-border-bottom" type="button" title="Borde inferior">↓</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-border-left" type="button" title="Borde izquierdo">←</button>
+        <button class="tx-btn tx-btn--fmt" id="btn-border-right" type="button" title="Borde derecho">→</button>
+        <label class="tx-color-label">Fondo <input type="color" id="opt-bg" value="#fff3d6" /></label>
+        <button class="tx-btn" id="btn-bg-clear" type="button">Quitar fondo</button>
+        <label class="tx-color-label">Ancho col. <input type="number" id="opt-colwidth" min="40" max="600" step="10" placeholder="auto" /> px</label>
+        <button class="tx-btn" id="btn-colwidth-auto" type="button">Auto</button>
+      </div>
       <div class="tx-grid-wrap"><div id="grid"></div></div>
+      <details class="tx-import-latex" id="import-latex-panel">
+        <summary>Importar código LaTeX</summary>
+        <p class="tx-hint">Pega el código de un <code>tabular</code>, <code>tabularx</code> o
+        <code>longtable</code> (con o sin entorno <code>table</code>) y se carga en la
+        cuadrícula: texto, formato, fusiones, bordes, anchos y colores.</p>
+        <textarea id="latex-input" rows="6" spellcheck="false"
+          placeholder="\\begin{tabular}{lll}&#10;A &amp; B &amp; C \\\\&#10;\\end{tabular}"></textarea>
+        <div class="tx-actions">
+          <button class="tx-btn tx-btn--primary" id="btn-import-latex-go" type="button">Importar</button>
+          <span class="tx-size" id="import-latex-msg"></span>
+        </div>
+      </details>
+      <details class="tx-recents" id="recents-panel">
+        <summary>Tablas recientes</summary>
+        <p class="tx-hint">Se guardan en tu navegador, sin servidor. La tabla actual
+        se guarda sola al editarla.</p>
+        <div class="tx-actions">
+          <button class="tx-btn" id="btn-save-recent" type="button">Guardar copia</button>
+          <button class="tx-btn" id="btn-restore-autosave" type="button" hidden>Restaurar última sesión</button>
+          <span class="tx-size" id="recents-msg"></span>
+        </div>
+        <ul class="tx-recents-list" id="recents-list"></ul>
+      </details>
       <p class="tx-hint">Haz clic en una celda y escribe. <kbd>Tab</kbd> pasa a la siguiente,
       <kbd>Enter</kbd> baja una fila y las flechas se mueven entre celdas.
       <kbd>Shift</kbd> + clic selecciona un rango.</p>
@@ -62,6 +121,7 @@ app.innerHTML = `
         <button class="tx-tab tx-tab--active" id="tab-latex" type="button">LaTeX</button>
         <button class="tx-tab" id="tab-booktabs" type="button">LaTeX booktabs</button>
         <button class="tx-tab" id="tab-markdown" type="button">Markdown</button>
+        <button class="tx-tab" id="tab-typst" type="button">Typst</button>
       </div>
       <div class="tx-options">
         <label>Título <input type="text" id="opt-caption" placeholder="Título de la tabla" /></label>
@@ -69,11 +129,14 @@ app.innerHTML = `
         <label><input type="checkbox" id="opt-centered" checked /> Centrada</label>
         <label><input type="checkbox" id="opt-header" checked /> Primera fila: encabezado</label>
         <label><input type="checkbox" id="opt-escape" checked /> Escapar caracteres</label>
+        <label><input type="checkbox" id="opt-tabularx" /> Ajustar al ancho (tabularx)</label>
+        <label><input type="checkbox" id="opt-longtable" /> Tabla larga (longtable)</label>
       </div>
       <pre class="tx-code"><code id="code"></code></pre>
       <div class="tx-actions">
         <button class="tx-btn tx-btn--primary" id="btn-copy" type="button">Copiar código</button>
         <button class="tx-btn" id="btn-download" type="button">Descargar</button>
+        <button class="tx-btn" id="btn-overleaf" type="button">Abrir en Overleaf</button>
         <span class="tx-copied" id="copied-msg" hidden>¡Copiado!</span>
       </div>
     </section>
@@ -81,7 +144,7 @@ app.innerHTML = `
   <footer class="tx-footer">
     TableX es software libre (GPL v3): puedes usarlo, estudiarlo, modificarlo y
     compartirlo. Código en
-    <a href="https://github.com/reoxforlife/tablex">github.com/reoxforlife/tablex</a>.
+    <a href="https://github.com/reoxlab/tablex">github.com/reoxlab/tablex</a>.
     Tus datos no salen de tu navegador: la tabla se genera aquí mismo, sin servidor.
   </footer>
 `
@@ -97,6 +160,10 @@ const labelInput = document.querySelector<HTMLInputElement>('#opt-label')!
 const centeredInput = document.querySelector<HTMLInputElement>('#opt-centered')!
 const headerInput = document.querySelector<HTMLInputElement>('#opt-header')!
 const escapeInput = document.querySelector<HTMLInputElement>('#opt-escape')!
+const tabularxInput = document.querySelector<HTMLInputElement>('#opt-tabularx')!
+const longtableInput = document.querySelector<HTMLInputElement>('#opt-longtable')!
+const bgInput = document.querySelector<HTMLInputElement>('#opt-bg')!
+const colwidthInput = document.querySelector<HTMLInputElement>('#opt-colwidth')!
 const copiedMsg = document.querySelector<HTMLSpanElement>('#copied-msg')!
 
 function latexOptions(): LatexOptions {
@@ -107,12 +174,22 @@ function latexOptions(): LatexOptions {
     centered: centeredInput.checked,
     headerRow: headerInput.checked,
     escape: escapeInput.checked,
+    tabularx: tabularxInput.checked,
+    longtable: longtableInput.checked,
   }
 }
 
 function generate(): string {
   if (format === 'markdown') {
     return toMarkdown(table, { escape: escapeInput.checked })
+  }
+  if (format === 'typst') {
+    return toTypst(table, {
+      caption: captionInput.value,
+      label: labelInput.value,
+      headerRow: headerInput.checked,
+      escape: escapeInput.checked,
+    })
   }
   return toLatex(table, latexOptions())
 }
@@ -131,20 +208,54 @@ function updateSize(): void {
 }
 
 function updateLatexOptionsEnabled(): void {
-  const isLatex = format !== 'markdown'
-  captionInput.disabled = !isLatex
-  labelInput.disabled = !isLatex
+  // Título y etiqueta valen en LaTeX y en Typst (figure); centrado,
+  // tabularx y longtable solo en LaTeX; encabezado en LaTeX y Typst.
+  // Markdown no usa ninguna. longtable y tabularx son excluyentes.
+  const isMarkdown = format === 'markdown'
+  const isLatex = format === 'latex' || format === 'booktabs'
+  captionInput.disabled = isMarkdown
+  labelInput.disabled = isMarkdown
   centeredInput.disabled = !isLatex
-  headerInput.disabled = !isLatex
+  headerInput.disabled = isMarkdown
+  tabularxInput.disabled = !isLatex || longtableInput.checked
+  longtableInput.disabled = !isLatex || tabularxInput.checked
 }
 
 const editor = new GridEditor(gridHost, table, {
-  onTextChange: updateCode,
+  onTextChange: () => {
+    updateCode()
+    scheduleAutosave()
+  },
   onStructureChange: () => {
     updateCode()
     updateSize()
+    updateFormatButtons()
+    scheduleAutosave()
   },
+  onSelectionChange: updateFormatButtons,
 })
+
+function updateFormatButtons(): void {
+  const fmt = editor.selectedCellFormat()
+  document
+    .querySelector<HTMLButtonElement>('#btn-bold')!
+    .classList.toggle('tx-btn--active', fmt.bold)
+  document
+    .querySelector<HTMLButtonElement>('#btn-italic')!
+    .classList.toggle('tx-btn--active', fmt.italic)
+  document
+    .querySelector<HTMLButtonElement>('#btn-align-left')!
+    .classList.toggle('tx-btn--active', fmt.align === 'left')
+  document
+    .querySelector<HTMLButtonElement>('#btn-align-center')!
+    .classList.toggle('tx-btn--active', fmt.align === 'center')
+  document
+    .querySelector<HTMLButtonElement>('#btn-align-right')!
+    .classList.toggle('tx-btn--active', fmt.align === 'right')
+  bgInput.value = fmt.background ?? '#fff3d6'
+  const width = editor.selectedColWidth()
+  colwidthInput.value = width === null ? '' : String(width)
+}
 
 function setFormat(next: Format): void {
   format = next
@@ -152,6 +263,7 @@ function setFormat(next: Format): void {
     ['tab-latex', 'latex'],
     ['tab-booktabs', 'booktabs'],
     ['tab-markdown', 'markdown'],
+    ['tab-typst', 'typst'],
   ] as const) {
     document
       .querySelector<HTMLButtonElement>(`#${id}`)!
@@ -159,7 +271,14 @@ function setFormat(next: Format): void {
   }
   const downloadBtn = document.querySelector<HTMLButtonElement>('#btn-download')!
   downloadBtn.textContent =
-    next === 'markdown' ? 'Descargar .md' : 'Descargar .tex'
+    next === 'markdown'
+      ? 'Descargar .md'
+      : next === 'typst'
+        ? 'Descargar .typ'
+        : 'Descargar .tex'
+  // Overleaf solo tiene sentido con LaTeX.
+  document.querySelector<HTMLButtonElement>('#btn-overleaf')!.hidden =
+    next === 'markdown' || next === 'typst'
   updateLatexOptionsEnabled()
   updateCode()
 }
@@ -173,6 +292,9 @@ document
 document
   .querySelector<HTMLButtonElement>('#tab-markdown')!
   .addEventListener('click', () => setFormat('markdown'))
+document
+  .querySelector<HTMLButtonElement>('#tab-typst')!
+  .addEventListener('click', () => setFormat('typst'))
 
 document
   .querySelector<HTMLButtonElement>('#btn-row-above')!
@@ -196,12 +318,294 @@ document
   .querySelector<HTMLButtonElement>('#btn-clear')!
   .addEventListener('click', () => editor.clear())
 
+// -- formato y fusiones (v0.2) ----------------------------------------------
+
+document
+  .querySelector<HTMLButtonElement>('#btn-bold')!
+  .addEventListener('click', () => {
+    const fmt = editor.selectedCellFormat()
+    editor.applyFormat({ bold: !fmt.bold })
+  })
+document
+  .querySelector<HTMLButtonElement>('#btn-italic')!
+  .addEventListener('click', () => {
+    const fmt = editor.selectedCellFormat()
+    editor.applyFormat({ italic: !fmt.italic })
+  })
+document
+  .querySelector<HTMLButtonElement>('#btn-align-left')!
+  .addEventListener('click', () => editor.applyFormat({ align: 'left' }))
+document
+  .querySelector<HTMLButtonElement>('#btn-align-center')!
+  .addEventListener('click', () => editor.applyFormat({ align: 'center' }))
+document
+  .querySelector<HTMLButtonElement>('#btn-align-right')!
+  .addEventListener('click', () => editor.applyFormat({ align: 'right' }))
+
+const importMsg = document.querySelector<HTMLSpanElement>('#import-msg')!
+document
+  .querySelector<HTMLButtonElement>('#btn-merge')!
+  .addEventListener('click', () => {
+    if (!editor.mergeSelection()) {
+      importMsg.textContent = 'No se puede fusionar esa selección.'
+      window.setTimeout(() => {
+        importMsg.textContent = ''
+      }, 2500)
+    }
+  })
+document
+  .querySelector<HTMLButtonElement>('#btn-unmerge')!
+  .addEventListener('click', () => {
+    if (!editor.unmergeSelection()) {
+      importMsg.textContent = 'La celda activa no está fusionada.'
+      window.setTimeout(() => {
+        importMsg.textContent = ''
+      }, 2500)
+    }
+  })
+
+// -- importar XLSX ------------------------------------------------------------
+
+const fileInput = document.querySelector<HTMLInputElement>('#file-xlsx')!
+document
+  .querySelector<HTMLButtonElement>('#btn-import-xlsx')!
+  .addEventListener('click', () => fileInput.click())
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files?.[0]
+  if (!file) return
+  importMsg.textContent = 'Importando…'
+  importXlsx(file)
+    .then((imported) => {
+      editor.setTable(imported)
+      importMsg.textContent = `Importado: ${file.name}`
+      track('table-import-xlsx')
+    })
+    .catch((err: unknown) => {
+      importMsg.textContent =
+        err instanceof Error ? err.message : 'No se pudo importar el archivo.'
+    })
+    .finally(() => {
+      fileInput.value = ''
+      window.setTimeout(() => {
+        importMsg.textContent = ''
+      }, 4000)
+    })
+})
+
+// -- importar LaTeX -----------------------------------------------------------
+
+const latexPanel = document.querySelector<HTMLDetailsElement>('#import-latex-panel')!
+const latexInput = document.querySelector<HTMLTextAreaElement>('#latex-input')!
+const latexMsg = document.querySelector<HTMLSpanElement>('#import-latex-msg')!
+document
+  .querySelector<HTMLButtonElement>('#btn-import-latex')!
+  .addEventListener('click', () => {
+    latexPanel.open = !latexPanel.open
+    if (latexPanel.open) latexInput.focus()
+  })
+document
+  .querySelector<HTMLButtonElement>('#btn-import-latex-go')!
+  .addEventListener('click', () => {
+    const code = latexInput.value
+    if (code.trim() === '') {
+      latexMsg.textContent = 'Pega primero el código LaTeX.'
+      return
+    }
+    try {
+      const parsed = parseLatex(code)
+      editor.setTable(parsed.table)
+      setFormat(parsed.style === 'booktabs' ? 'booktabs' : 'latex')
+      captionInput.value = parsed.caption
+      labelInput.value = parsed.label
+      tabularxInput.checked = parsed.tabularx
+      longtableInput.checked = parsed.longtable
+      headerInput.checked = parsed.headerRow
+      updateLatexOptionsEnabled()
+      // Si la tabla trae código LaTeX (matemáticas, comandos), el escape
+      // rompería ese código al re-exportar: se apaga y se avisa.
+      const hasLatexCode = parsed.table.cells.some((row) =>
+        row.some((cell) => cell.text.includes('$') || /\\[a-zA-Z]/.test(cell.text)),
+      )
+      if (hasLatexCode) escapeInput.checked = false
+      updateCode()
+      updateSize()
+      const notes = [
+        `Importado: ${parsed.table.rows} × ${parsed.table.cols}.`,
+        ...(hasLatexCode
+          ? ['Escape desactivado: la tabla trae código LaTeX (p. ej. $...$).']
+          : []),
+        ...parsed.warnings,
+      ]
+      latexMsg.textContent = notes.join(' ')
+      track('table-import-latex')
+    } catch (err: unknown) {
+      latexMsg.textContent =
+        err instanceof Error ? err.message : 'No se pudo importar el código.'
+    }
+  })
+
+// -- tablas recientes y autoguardado (v0.3) -----------------------------------
+
+let autosaveTimer: number | undefined
+function scheduleAutosave(): void {
+  window.clearTimeout(autosaveTimer)
+  autosaveTimer = window.setTimeout(() => {
+    autosave(window.localStorage, table, captionInput.value, labelInput.value)
+  }, 1000)
+}
+
+const recentsList = document.querySelector<HTMLUListElement>('#recents-list')!
+const recentsMsg = document.querySelector<HTMLSpanElement>('#recents-msg')!
+const restoreBtn = document.querySelector<HTMLButtonElement>('#btn-restore-autosave')!
+
+function loadIntoEditor(
+  model: Parameters<typeof editor.setTable>[0],
+  caption: string,
+  label: string,
+): void {
+  editor.setTable(model)
+  captionInput.value = caption
+  labelInput.value = label
+  updateCode()
+  updateSize()
+  updateFormatButtons()
+}
+
+function renderRecents(): void {
+  recentsList.replaceChildren()
+  const entries = loadRecents(window.localStorage)
+  if (entries.length === 0) {
+    const li = document.createElement('li')
+    li.className = 'tx-recents-empty'
+    li.textContent = 'Aún no hay copias guardadas.'
+    recentsList.appendChild(li)
+    return
+  }
+  for (const entry of entries) {
+    const li = document.createElement('li')
+    li.className = 'tx-recents-item'
+    const name = document.createElement('strong')
+    name.textContent = entry.name
+    const date = document.createElement('span')
+    date.className = 'tx-recents-date'
+    date.textContent = new Date(entry.savedAt).toLocaleString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    const loadBtn = document.createElement('button')
+    loadBtn.type = 'button'
+    loadBtn.className = 'tx-btn'
+    loadBtn.textContent = 'Cargar'
+    loadBtn.addEventListener('click', () => {
+      loadIntoEditor(entry.model, entry.caption, entry.label)
+      recentsMsg.textContent = `Cargado: ${entry.name}`
+    })
+    const delBtn = document.createElement('button')
+    delBtn.type = 'button'
+    delBtn.className = 'tx-btn'
+    delBtn.textContent = '✕'
+    delBtn.title = 'Eliminar copia'
+    delBtn.addEventListener('click', () => {
+      deleteRecent(window.localStorage, entry.id)
+      renderRecents()
+    })
+    li.append(name, date, loadBtn, delBtn)
+    recentsList.appendChild(li)
+  }
+}
+
+document
+  .querySelector<HTMLButtonElement>('#btn-save-recent')!
+  .addEventListener('click', () => {
+    const entries = saveRecent(
+      window.localStorage,
+      table,
+      captionInput.value,
+      labelInput.value,
+    )
+    renderRecents()
+    recentsMsg.textContent = `Guardado: ${entries[0].name}`
+  })
+
+restoreBtn.addEventListener('click', () => {
+  const saved = loadAutosave(window.localStorage)
+  if (!saved) return
+  loadIntoEditor(saved.model, saved.caption, saved.label)
+  recentsMsg.textContent = 'Sesión anterior restaurada.'
+  restoreBtn.hidden = true
+})
+
+// Al arrancar, si hay autoguardado de una tabla con contenido, se ofrece
+// restaurarlo (no se restaura solo: sorprendería al abrir la página).
+const savedSession = loadAutosave(window.localStorage)
+if (
+  savedSession &&
+  savedSession.model.cells.some((row) => row.some((cell) => cell.text.trim() !== ''))
+) {
+  restoreBtn.hidden = false
+}
+renderRecents()
+
 for (const input of [captionInput, labelInput]) {
   input.addEventListener('input', updateCode)
 }
-for (const input of [centeredInput, headerInput, escapeInput]) {
+for (const input of [centeredInput, headerInput, escapeInput, tabularxInput, longtableInput]) {
   input.addEventListener('change', updateCode)
 }
+// longtable y tabularx son excluyentes: marcar una desmarca la otra.
+tabularxInput.addEventListener('change', () => {
+  if (tabularxInput.checked) longtableInput.checked = false
+  updateLatexOptionsEnabled()
+})
+longtableInput.addEventListener('change', () => {
+  if (longtableInput.checked) tabularxInput.checked = false
+  updateLatexOptionsEnabled()
+})
+
+// -- bordes, fondo y anchos (v0.2 parte 2) ------------------------------------
+
+document
+  .querySelector<HTMLButtonElement>('#btn-borders-all')!
+  .addEventListener('click', () => editor.allBorders())
+document
+  .querySelector<HTMLButtonElement>('#btn-borders-none')!
+  .addEventListener('click', () => editor.noBorders())
+
+function toggleBorder(side: 'top' | 'right' | 'bottom' | 'left'): void {
+  // El botón invierte el estado de la celda activa en ese lado.
+  const cell = table.cells[editor.selection.row]?.[editor.selection.col]
+  const current = cell?.borders[side] ?? false
+  editor.applyBorders({ [side]: !current })
+}
+
+document
+  .querySelector<HTMLButtonElement>('#btn-border-top')!
+  .addEventListener('click', () => toggleBorder('top'))
+document
+  .querySelector<HTMLButtonElement>('#btn-border-bottom')!
+  .addEventListener('click', () => toggleBorder('bottom'))
+document
+  .querySelector<HTMLButtonElement>('#btn-border-left')!
+  .addEventListener('click', () => toggleBorder('left'))
+document
+  .querySelector<HTMLButtonElement>('#btn-border-right')!
+  .addEventListener('click', () => toggleBorder('right'))
+
+bgInput.addEventListener('input', () => editor.applyBackground(bgInput.value))
+document
+  .querySelector<HTMLButtonElement>('#btn-bg-clear')!
+  .addEventListener('click', () => editor.applyBackground(null))
+
+colwidthInput.addEventListener('change', () => {
+  const value = colwidthInput.value.trim()
+  const width = value === '' ? null : Number.parseInt(value, 10)
+  editor.setSelectedColWidth(Number.isFinite(width) ? width : null)
+})
+document
+  .querySelector<HTMLButtonElement>('#btn-colwidth-auto')!
+  .addEventListener('click', () => editor.setSelectedColWidth(null))
 
 function track(eventName: string): void {
   const umami = (window as unknown as { umami?: { track: (n: string, d?: Record<string, string>) => void } }).umami
@@ -233,7 +637,7 @@ async function copyCode(): Promise<void> {
 
 function downloadCode(): void {
   const code = generate()
-  const ext = format === 'markdown' ? 'md' : 'tex'
+  const ext = format === 'markdown' ? 'md' : format === 'typst' ? 'typ' : 'tex'
   const blob = new Blob([code], { type: 'text/plain;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -250,7 +654,14 @@ document
 document
   .querySelector<HTMLButtonElement>('#btn-download')!
   .addEventListener('click', downloadCode)
+document
+  .querySelector<HTMLButtonElement>('#btn-overleaf')!
+  .addEventListener('click', () => {
+    openInOverleaf(generate())
+    track('table-overleaf')
+  })
 
 updateSize()
 updateLatexOptionsEnabled()
+updateFormatButtons()
 updateCode()
