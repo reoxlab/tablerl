@@ -1,11 +1,11 @@
-# TableX
+# TableRL
 
 Generador gráfico de tablas para LaTeX, Markdown y Typst. Hecho en Reox Lab.
 
 Arma tu tabla en una cuadrícula, como en una hoja de cálculo, y copia el código
 generado en vivo. Sin cuentas, sin servidor, sin que tus datos salgan del navegador.
 
-- **Web:** https://reoxlab.com/herramientas/tablex
+- **Web:** https://reoxlab.com/herramientas/tablerl
 - **Demo local:** `npm install && npm run dev`
 - **Licencia:** GPL v3 (todo derivado sigue libre)
 

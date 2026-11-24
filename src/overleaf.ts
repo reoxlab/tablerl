@@ -1,21 +1,21 @@
 // Copyright (C) 2026 Francisco Peña Gallardo (Reox Lab)
 //
-// This file is part of TableX.
+// This file is part of TableRL.
 //
-// TableX is free software: you can redistribute it and/or modify
+// TableRL is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// TableX is distributed in the hope that it will be useful,
+// TableRL is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with TableX. If not, see <https://www.gnu.org/licenses/>.
+// along with TableRL. If not, see <https://www.gnu.org/licenses/>.
 
-// TableX — abrir en Overleaf.
+// TableRL — abrir en Overleaf.
 //
 // Overleaf acepta crear un documento nuevo con un formulario POST a
 // https://www.overleaf.com/docs con el campo `snip` (documento LaTeX

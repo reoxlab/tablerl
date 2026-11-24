@@ -1,13 +1,13 @@
 services:
-  tablex:
+  tablerl:
     build: .
-    container_name: tablex
+    container_name: tablerl
     restart: unless-stopped
     networks:
       - sky-net
     # Sin puertos publicados: el acceso público llega por el túnel de
     # Cloudflare (ver README). Para probar en local:
-    #   docker run --rm --network sky-net -p 127.0.0.1:8080:80 tablex
+    #   docker run --rm --network sky-net -p 127.0.0.1:8080:80 tablerl
 
 networks:
   sky-net:

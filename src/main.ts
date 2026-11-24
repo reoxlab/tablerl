@@ -1,21 +1,21 @@
 // Copyright (C) 2026 Francisco Peña Gallardo (Reox Lab)
 //
-// This file is part of TableX.
+// This file is part of TableRL.
 //
-// TableX is free software: you can redistribute it and/or modify
+// TableRL is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// TableX is distributed in the hope that it will be useful,
+// TableRL is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with TableX. If not, see <https://www.gnu.org/licenses/>.
+// along with TableRL. If not, see <https://www.gnu.org/licenses/>.
 
-// TableX — punto de entrada: arma la interfaz (barra de herramientas,
+// TableRL — punto de entrada: arma la interfaz (barra de herramientas,
 // cuadrícula, opciones y panel de código) y la conecta con el modelo y los
 // exportadores. El código generado se actualiza en vivo con cada cambio.
 
@@ -53,7 +53,7 @@ app.innerHTML = `
     <div class="tx-header-inner">
       <div class="tx-header-text">
         <a class="tx-brand" href="https://reoxlab.com">← Reox Lab</a>
-        <h1>TableX</h1>
+        <h1>TableRL</h1>
         <p class="tx-tagline">Generador gráfico de tablas para LaTeX, Markdown y Typst</p>
       </div>
       <label class="tx-theme-label">Tema
@@ -166,9 +166,9 @@ app.innerHTML = `
     </section>
   </main>
   <footer class="tx-footer">
-    TableX es software libre (GPL v3): puedes usarlo, estudiarlo, modificarlo y
+    TableRL es software libre (GPL v3): puedes usarlo, estudiarlo, modificarlo y
     compartirlo. Código en
-    <a href="https://github.com/reoxlab/tablex">github.com/reoxlab/tablex</a>.
+    <a href="https://github.com/reoxlab/tablerl">github.com/reoxlab/tablerl</a>.
     Tus datos no salen de tu navegador: la tabla se genera aquí mismo, sin servidor.
   </footer>
 `

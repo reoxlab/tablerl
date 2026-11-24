@@ -1,4 +1,4 @@
-# TableX — Arquitectura
+# TableRL — Arquitectura
 
 > Nota de dirección completa en Obsidian: `Proyectos/tablex/Arquitectura.md`.
 > Este archivo es el resumen técnico que vive junto al código.
@@ -19,7 +19,7 @@ el código en vivo, sin que los datos salgan del navegador.
   El contenedor vive en Skynet (`/home/rixuko/herramientas/tablex/`), en la
   red `sky-net`, y el acceso público llega por el **túnel de Cloudflare**
   (no por Traefik: Traefik solo sirve los servicios de NetBird). La ruta
-  pública es `reoxlab.com/herramientas/tablex` y exige una regla en Zero
+  pública es `reoxlab.com/herramientas/tablerl` y exige una regla en Zero
   Trust (paso manual de Francisco). `nginx.conf` sirve la app bajo ese
   prefijo, porque el túnel reenvía la ruta completa sin recortarla.
 
@@ -55,7 +55,7 @@ Todos los exportadores leen este modelo y nada más.
 
 ## Decisiones pendientes (director)
 
-- URL pública: `reoxlab.com/herramientas/tablex` (subruta, decidida
+- URL pública: `reoxlab.com/herramientas/tablerl` (subruta, decidida
   2026-11-21: todo el tráfico y el SEO caen en el dominio principal).
 - Nombre visible y textos de la guía en español.
 - Si el MVP se publica al terminar o se espera a v0.2.
