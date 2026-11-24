@@ -25,9 +25,16 @@ import { GridEditor } from './editor'
 import { toLatex, type LatexOptions } from './exporters/latex'
 import { toMarkdown } from './exporters/markdown'
 import { toTypst } from './exporters/typst'
-import { importXlsx } from './importers/xlsx'
+import { toCsv } from './exporters/csv'
+import { loadSpreadsheet, type SpreadsheetBook } from './importers/spreadsheet'
 import { parseLatex } from './importers/latex'
 import { openInOverleaf } from './overleaf'
+import {
+  loadThemeChoice,
+  resolveTheme,
+  saveThemeChoice,
+  type ThemeChoice,
+} from './theme'
 import {
   autosave,
   deleteRecent,
@@ -36,7 +43,7 @@ import {
   saveRecent,
 } from './recents'
 
-type Format = 'latex' | 'booktabs' | 'markdown' | 'typst'
+type Format = 'latex' | 'booktabs' | 'markdown' | 'typst' | 'csv'
 
 const app = document.querySelector<HTMLDivElement>('#app')
 if (!app) throw new Error('Falta #app en index.html')
@@ -44,9 +51,18 @@ if (!app) throw new Error('Falta #app en index.html')
 app.innerHTML = `
   <header class="tx-header">
     <div class="tx-header-inner">
-      <a class="tx-brand" href="https://reoxlab.com">← Reox Lab</a>
-      <h1>TableX</h1>
-      <p class="tx-tagline">Generador gráfico de tablas para LaTeX, Markdown y Typst</p>
+      <div class="tx-header-text">
+        <a class="tx-brand" href="https://reoxlab.com">← Reox Lab</a>
+        <h1>TableX</h1>
+        <p class="tx-tagline">Generador gráfico de tablas para LaTeX, Markdown y Typst</p>
+      </div>
+      <label class="tx-theme-label">Tema
+        <select class="tx-theme-select" id="theme-select" aria-label="Tema de la aplicación">
+          <option value="system">Sistema</option>
+          <option value="light">Claro</option>
+          <option value="dark">Oscuro</option>
+        </select>
+      </label>
     </div>
   </header>
   <main class="tx-main">
@@ -70,10 +86,17 @@ app.innerHTML = `
         <button class="tx-btn tx-btn--fmt" id="btn-align-right" type="button" title="Alinear a la derecha">⇥</button>
         <button class="tx-btn" id="btn-merge" type="button">Fusionar</button>
         <button class="tx-btn" id="btn-unmerge" type="button">Separar</button>
-        <button class="tx-btn" id="btn-import-xlsx" type="button">Importar XLSX</button>
-        <input type="file" id="file-xlsx" accept=".xlsx,.xls" hidden />
+        <button class="tx-btn" id="btn-import-xlsx" type="button">Importar XLSX/ODS</button>
+        <input type="file" id="file-xlsx" accept=".xlsx,.xls,.ods" hidden />
         <button class="tx-btn" id="btn-import-latex" type="button">Importar LaTeX</button>
         <span class="tx-size" id="import-msg"></span>
+      </div>
+      <div class="tx-sheet-picker" id="sheet-picker" hidden>
+        <label>Hoja
+          <select id="sheet-select" aria-label="Hoja a importar"></select>
+        </label>
+        <button class="tx-btn tx-btn--primary" id="btn-sheet-go" type="button">Importar hoja</button>
+        <span class="tx-size" id="sheet-msg"></span>
       </div>
       <div class="tx-toolbar tx-toolbar--format">
         <button class="tx-btn" id="btn-borders-all" type="button">Todos los bordes</button>
@@ -122,6 +145,7 @@ app.innerHTML = `
         <button class="tx-tab" id="tab-booktabs" type="button">LaTeX booktabs</button>
         <button class="tx-tab" id="tab-markdown" type="button">Markdown</button>
         <button class="tx-tab" id="tab-typst" type="button">Typst</button>
+        <button class="tx-tab" id="tab-csv" type="button">CSV</button>
       </div>
       <div class="tx-options">
         <label>Título <input type="text" id="opt-caption" placeholder="Título de la tabla" /></label>
@@ -191,6 +215,14 @@ function generate(): string {
       escape: escapeInput.checked,
     })
   }
+  if (format === 'csv') {
+    // Separador punto y coma (Excel/LibreOffice en español). La casilla
+    // «Primera fila: encabezado» es la pregunta al usuario: en CSV el
+    // archivo lleva las mismas líneas en ambos casos, porque es texto
+    // plano sin metadatos; la respuesta queda como el ajuste de
+    // encabezado de la tabla.
+    return toCsv(table, { delimiter: ';' })
+  }
   return toLatex(table, latexOptions())
 }
 
@@ -209,14 +241,18 @@ function updateSize(): void {
 
 function updateLatexOptionsEnabled(): void {
   // Título y etiqueta valen en LaTeX y en Typst (figure); centrado,
-  // tabularx y longtable solo en LaTeX; encabezado en LaTeX y Typst.
-  // Markdown no usa ninguna. longtable y tabularx son excluyentes.
+  // tabularx y longtable solo en LaTeX; encabezado en LaTeX, Typst y CSV
+  // (en CSV es la pregunta «primera fila como encabezado»); el escape
+  // de LaTeX no aplica en CSV. Markdown no usa ninguna. longtable y
+  // tabularx son excluyentes.
   const isMarkdown = format === 'markdown'
+  const isCsv = format === 'csv'
   const isLatex = format === 'latex' || format === 'booktabs'
-  captionInput.disabled = isMarkdown
-  labelInput.disabled = isMarkdown
+  captionInput.disabled = isMarkdown || isCsv
+  labelInput.disabled = isMarkdown || isCsv
   centeredInput.disabled = !isLatex
   headerInput.disabled = isMarkdown
+  escapeInput.disabled = isCsv
   tabularxInput.disabled = !isLatex || longtableInput.checked
   longtableInput.disabled = !isLatex || tabularxInput.checked
 }
@@ -264,6 +300,7 @@ function setFormat(next: Format): void {
     ['tab-booktabs', 'booktabs'],
     ['tab-markdown', 'markdown'],
     ['tab-typst', 'typst'],
+    ['tab-csv', 'csv'],
   ] as const) {
     document
       .querySelector<HTMLButtonElement>(`#${id}`)!
@@ -275,10 +312,12 @@ function setFormat(next: Format): void {
       ? 'Descargar .md'
       : next === 'typst'
         ? 'Descargar .typ'
-        : 'Descargar .tex'
+        : next === 'csv'
+          ? 'Descargar .csv'
+          : 'Descargar .tex'
   // Overleaf solo tiene sentido con LaTeX.
   document.querySelector<HTMLButtonElement>('#btn-overleaf')!.hidden =
-    next === 'markdown' || next === 'typst'
+    next === 'markdown' || next === 'typst' || next === 'csv'
   updateLatexOptionsEnabled()
   updateCode()
 }
@@ -295,6 +334,9 @@ document
 document
   .querySelector<HTMLButtonElement>('#tab-typst')!
   .addEventListener('click', () => setFormat('typst'))
+document
+  .querySelector<HTMLButtonElement>('#tab-csv')!
+  .addEventListener('click', () => setFormat('csv'))
 
 document
   .querySelector<HTMLButtonElement>('#btn-row-above')!
@@ -364,31 +406,77 @@ document
     }
   })
 
-// -- importar XLSX ------------------------------------------------------------
+// -- importar hoja de cálculo (XLSX, XLS, ODS) ------------------------------
 
 const fileInput = document.querySelector<HTMLInputElement>('#file-xlsx')!
+const sheetPicker = document.querySelector<HTMLDivElement>('#sheet-picker')!
+const sheetSelect = document.querySelector<HTMLSelectElement>('#sheet-select')!
+const sheetMsg = document.querySelector<HTMLSpanElement>('#sheet-msg')!
+let pendingBook: SpreadsheetBook | null = null
+let pendingFileName = ''
+
+function importSheetFromBook(book: SpreadsheetBook, name: string, fileName: string): void {
+  try {
+    editor.setTable(book.importSheet(name))
+    importMsg.textContent = `Importado: ${fileName} (${name})`
+    track(fileName.toLowerCase().endsWith('.ods') ? 'table-import-ods' : 'table-import-xlsx')
+  } catch (err: unknown) {
+    importMsg.textContent =
+      err instanceof Error ? err.message : 'No se pudo importar el archivo.'
+  }
+  sheetPicker.hidden = true
+  pendingBook = null
+  window.setTimeout(() => {
+    importMsg.textContent = ''
+  }, 4000)
+}
+
 document
   .querySelector<HTMLButtonElement>('#btn-import-xlsx')!
   .addEventListener('click', () => fileInput.click())
+document
+  .querySelector<HTMLButtonElement>('#btn-sheet-go')!
+  .addEventListener('click', () => {
+    if (!pendingBook) return
+    importSheetFromBook(pendingBook, sheetSelect.value, pendingFileName)
+  })
 fileInput.addEventListener('change', () => {
   const file = fileInput.files?.[0]
   if (!file) return
   importMsg.textContent = 'Importando…'
-  importXlsx(file)
-    .then((imported) => {
-      editor.setTable(imported)
-      importMsg.textContent = `Importado: ${file.name}`
-      track('table-import-xlsx')
+  sheetPicker.hidden = true
+  pendingBook = null
+  loadSpreadsheet(file)
+    .then((book) => {
+      pendingFileName = file.name
+      if (book.sheetNames.length === 1) {
+        // Una sola hoja: se importa directo, como antes.
+        importSheetFromBook(book, book.sheetNames[0], file.name)
+        return
+      }
+      // Varias hojas: se pregunta cuál importar.
+      pendingBook = book
+      sheetSelect.replaceChildren()
+      for (const name of book.sheetNames) {
+        const opt = document.createElement('option')
+        opt.value = name
+        opt.textContent = name
+        sheetSelect.appendChild(opt)
+      }
+      sheetPicker.hidden = false
+      sheetMsg.textContent = `El libro trae ${book.sheetNames.length} hojas.`
+      importMsg.textContent = ''
+      sheetSelect.focus()
     })
     .catch((err: unknown) => {
       importMsg.textContent =
         err instanceof Error ? err.message : 'No se pudo importar el archivo.'
-    })
-    .finally(() => {
-      fileInput.value = ''
       window.setTimeout(() => {
         importMsg.textContent = ''
       }, 4000)
+    })
+    .finally(() => {
+      fileInput.value = ''
     })
 })
 
@@ -637,8 +725,18 @@ async function copyCode(): Promise<void> {
 
 function downloadCode(): void {
   const code = generate()
-  const ext = format === 'markdown' ? 'md' : format === 'typst' ? 'typ' : 'tex'
-  const blob = new Blob([code], { type: 'text/plain;charset=utf-8' })
+  const ext =
+    format === 'markdown'
+      ? 'md'
+      : format === 'typst'
+        ? 'typ'
+        : format === 'csv'
+          ? 'csv'
+          : 'tex'
+  const blob = new Blob(
+    [code],
+    { type: format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' },
+  )
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -660,6 +758,28 @@ document
     openInOverleaf(generate())
     track('table-overleaf')
   })
+
+// -- tema claro / oscuro / sistema (v1.1.0) -----------------------------------
+
+const themeSelect = document.querySelector<HTMLSelectElement>('#theme-select')!
+const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+let themeChoice: ThemeChoice = loadThemeChoice(window.localStorage)
+function applyTheme(): void {
+  document.documentElement.dataset.theme = resolveTheme(
+    themeChoice,
+    mediaQuery.matches,
+  )
+}
+themeSelect.value = themeChoice
+themeSelect.addEventListener('change', () => {
+  themeChoice = themeSelect.value as ThemeChoice
+  saveThemeChoice(window.localStorage, themeChoice)
+  applyTheme()
+})
+mediaQuery.addEventListener('change', () => {
+  if (themeChoice === 'system') applyTheme()
+})
+applyTheme()
 
 updateSize()
 updateLatexOptionsEnabled()

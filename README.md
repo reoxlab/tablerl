@@ -11,11 +11,11 @@ generado en vivo. Sin cuentas, sin servidor, sin que tus datos salgan del navega
 
 ## Estado
 
-v1.0: editor completo con formato (negrita, cursiva, alineación, fusiones,
-bordes por lado, colores, anchos de columna), exportadores LaTeX (estándar,
-booktabs, longtable, tabularx), Markdown y Typst, importar XLSX y LaTeX de
-vuelta, pegar TSV, botón de abrir en Overleaf y tablas recientes con
-autoguardado. Ver la hoja de ruta en `docs/ARCHITECTURE.md`.
+v1.1.0: todo lo de v1.0, más temas claro y oscuro (con «Sistema» por
+defecto, que sigue al sistema operativo), exportar a CSV (separador punto
+y coma, para Excel y LibreOffice en español) e importar ODS además de
+XLSX/XLS (si el libro trae varias hojas, se pregunta cuál importar).
+Ver la hoja de ruta en `docs/ARCHITECTURE.md`.
 
 ## Desarrollo
 
@@ -29,6 +29,6 @@ npm test         # comprobaciones de los exportadores e importadores
 
 ## Formatos
 
-LaTeX (estándar, booktabs, longtable, tabularx) · Markdown · Typst.
-Pegar celdas desde Excel / Google Sheets, importar XLSX y leer código
-LaTeX de vuelta.
+LaTeX (estándar, booktabs, longtable, tabularx) · Markdown · Typst · CSV.
+Pegar celdas desde Excel / Google Sheets, importar XLSX, XLS y ODS y leer
+código LaTeX de vuelta.

@@ -73,7 +73,8 @@ const typstMerged = toTypst(m, {
   escape: true,
 })
 
-// Importador XLSX: genera un libro de prueba y lo importa de vuelta.
+// Importador de hojas de cálculo: genera un libro de prueba y lo importa
+// de vuelta.
 import xlsxMod from 'xlsx'
 const XLSX = xlsxMod
 const wb = XLSX.utils.book_new()
@@ -85,8 +86,8 @@ const ws = XLSX.utils.aoa_to_sheet([
 ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }]
 XLSX.utils.book_append_sheet(wb, ws, 'Hoja1')
 const xlsxBuf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer
-const { importXlsx } = await import('../src/importers/xlsx')
-const imported = await importXlsx(new File([xlsxBuf], 'prueba.xlsx'))
+const { importSpreadsheet } = await import('../src/importers/spreadsheet')
+const imported = await importSpreadsheet(new File([xlsxBuf], 'prueba.xlsx'))
 
 // Bordes, fondo y anchos (v0.2 parte 2).
 const b = emptyTable(2, 2)
