@@ -6,9 +6,9 @@
   --dorado: #cca757;
   --carbon: #131315;
   --fondo: #ffffff;
-  --fondo-suave: #faf7f2;
-  --borde: #efe9df;
-  --borde-fuerte: #ddd5c7;
+  --fondo-suave: #f2e4e6;
+  --borde: #e9d6d9;
+  --borde-fuerte: #d9bcc2;
   --texto-suave: #5b5560;
   --radio: 10px;
 }
@@ -36,7 +36,7 @@ a {
 }
 
 .tx-header-inner {
-  max-width: 1180px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 1.1rem 1rem 1rem;
 }
@@ -67,11 +67,11 @@ a {
 /* -- layout ---------------------------------------------------------------- */
 
 .tx-main {
-  max-width: 1180px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 1rem;
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-columns: minmax(0, 8fr) minmax(0, 5fr);
   gap: 1.25rem;
   align-items: start;
 }
@@ -196,7 +196,7 @@ a {
   min-width: 110px;
   height: 2.4rem;
   padding: 0.45rem 0.6rem;
-  border: 1px dashed #e8e2d8;
+  border: 1px dashed #e3d2d5;
   font: inherit;
   font-size: 0.92rem;
   outline: none;
@@ -215,7 +215,7 @@ a {
 }
 
 .tx-cell--selected {
-  background: #fdf6ec;
+  background: #f9e9ec;
 }
 
 /* Bordes del modelo: línea sólida donde la celda lleva borde; la rejilla
@@ -478,7 +478,7 @@ a {
 /* -- pie --------------------------------------------------------------------- */
 
 .tx-footer {
-  max-width: 1180px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 0 1rem 2rem;
   font-size: 0.82rem;
