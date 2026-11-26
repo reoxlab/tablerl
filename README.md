@@ -11,6 +11,8 @@ generado en vivo. Sin cuentas, sin servidor, sin que tus datos salgan del navega
 
 ## Estado
 
+v1.2.1: buzón de sugerencias centrado (rl-suggest v1.0.1: límite 500, CRLF, contador).
+
 v1.2.0: buzón de sugerencias integrado (`rl-suggest`) para enviar mejoras por correo.
 
 v1.1.0: todo lo de v1.0, más temas claro y oscuro (con «Sistema» por
