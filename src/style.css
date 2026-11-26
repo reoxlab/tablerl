@@ -569,3 +569,8 @@ a {
   color: var(--texto-suave);
   line-height: 1.6;
 }
+.tx-suggest-wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
