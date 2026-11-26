@@ -166,7 +166,9 @@ app.innerHTML = `
       </div>
     </section>
   </main>
-  <div id="suggest-box"></div>
+  <div class="tx-suggest-wrap">
+    <div id="suggest-box"></div>
+  </div>
   <footer class="tx-footer">
     TableRL es software libre (GPL v3): puedes usarlo, estudiarlo, modificarlo y
     compartirlo. Código en
