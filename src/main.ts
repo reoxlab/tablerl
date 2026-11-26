@@ -42,6 +42,7 @@ import {
   loadRecents,
   saveRecent,
 } from './recents'
+import { renderSuggestBox } from 'rl-suggest'
 
 type Format = 'latex' | 'booktabs' | 'markdown' | 'typst' | 'csv'
 
@@ -165,6 +166,7 @@ app.innerHTML = `
       </div>
     </section>
   </main>
+  <div id="suggest-box"></div>
   <footer class="tx-footer">
     TableRL es software libre (GPL v3): puedes usarlo, estudiarlo, modificarlo y
     compartirlo. Código en
@@ -189,6 +191,11 @@ const longtableInput = document.querySelector<HTMLInputElement>('#opt-longtable'
 const bgInput = document.querySelector<HTMLInputElement>('#opt-bg')!
 const colwidthInput = document.querySelector<HTMLInputElement>('#opt-colwidth')!
 const copiedMsg = document.querySelector<HTMLSpanElement>('#copied-msg')!
+
+renderSuggestBox(document.querySelector<HTMLDivElement>('#suggest-box')!, {
+  toolName: 'TableRL',
+  onSend: () => track('tablerl-suggest-send'),
+})
 
 function latexOptions(): LatexOptions {
   return {
