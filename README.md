@@ -11,6 +11,8 @@ generado en vivo. Sin cuentas, sin servidor, sin que tus datos salgan del navega
 
 ## Estado
 
+v1.2.0: buzón de sugerencias integrado (`rl-suggest`) para enviar mejoras por correo.
+
 v1.1.0: todo lo de v1.0, más temas claro y oscuro (con «Sistema» por
 defecto, que sigue al sistema operativo), exportar a CSV (separador punto
 y coma, para Excel y LibreOffice en español) e importar ODS además de
